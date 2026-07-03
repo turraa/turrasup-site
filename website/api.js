@@ -132,6 +132,50 @@
       });
     },
 
+    loginEmail(email, password) {
+      return request('/cabinet/auth/email/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+    },
+
+    registerEmailStandalone(data) {
+      return request('/cabinet/auth/email/register/standalone', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    verifyEmail(token) {
+      return request('/cabinet/auth/email/verify', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+    },
+
+    getOAuthProviders() {
+      return request('/cabinet/auth/oauth/providers');
+    },
+
+    getOAuthAuthorizeUrl(provider) {
+      return request(`/cabinet/auth/oauth/${encodeURIComponent(provider)}/authorize`);
+    },
+
+    oauthCallback(provider, code, state, deviceId) {
+      return request(`/cabinet/auth/oauth/${encodeURIComponent(provider)}/callback`, {
+        method: 'POST',
+        body: JSON.stringify({
+          code,
+          state,
+          device_id: deviceId || undefined,
+        }),
+      });
+    },
+
+    getMe() {
+      return request('/cabinet/auth/me');
+    },
+
     getPurchaseOptions() {
       return request('/cabinet/subscription/purchase-options');
     },

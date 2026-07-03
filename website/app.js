@@ -83,7 +83,115 @@
     set('link-support', c.supportUrl);
     set('footer-bot', c.telegramUrl);
     set('footer-support', c.supportUrl);
-    $('btn-download').href = c.downloadUrl;
+    ['btn-download', 'btn-download-main', 'btn-download-hero'].forEach((id) => {
+      set(id, c.downloadUrl);
+    });
+  }
+
+  async function handleAuthSuccess(auth) {
+    window.TurraAuth.applyAuthResponse(auth);
+    state.user = auth.user;
+    await afterLogin();
+  }
+
+  function initAuthTabs() {
+    const panes = {
+      telegram: $('auth-telegram'),
+      email: $('auth-email'),
+    };
+    document.querySelectorAll('.auth-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        Object.values(panes).forEach((p) => p.classList.add('hidden'));
+        panes[tab.dataset.tab].classList.remove('hidden');
+      });
+    });
+
+    const loginForm = $('form-email-login');
+    const registerForm = $('form-email-register');
+    document.querySelectorAll('.auth-subtab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-subtab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        const isLogin = tab.dataset.emailMode === 'login';
+        loginForm.classList.toggle('hidden', !isLogin);
+        registerForm.classList.toggle('hidden', isLogin);
+      });
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const fd = new FormData(loginForm);
+      const btn = loginForm.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        const auth = await api().loginEmail(fd.get('email'), fd.get('password'));
+        await handleAuthSuccess(auth);
+      } catch (err) {
+        showAlert(window.TurraAuth.authErrorMessage(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const fd = new FormData(registerForm);
+      const btn = registerForm.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        const res = await api().registerEmailStandalone({
+          email: fd.get('email'),
+          password: fd.get('password'),
+          first_name: fd.get('first_name') || undefined,
+          language: 'ru',
+        });
+        showAlert(
+          res.message || 'Письмо отправлено. Откройте ссылку в почте, чтобы подтвердить регистрацию.',
+          'success',
+        );
+      } catch (err) {
+        showAlert(window.TurraAuth.authErrorMessage(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  async function initOAuthProviders() {
+    const row = $('oauth-providers');
+    try {
+      const { providers } = await api().getOAuthProviders();
+      if (!providers?.length) return;
+
+      row.classList.remove('hidden');
+      providers.forEach((p) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn ' + (p.name === 'yandex' ? 'btn-yandex' : 'btn-secondary');
+        btn.style.width = '100%';
+        btn.textContent =
+          p.name === 'yandex' ? 'Войти через Яндекс' : `Войти через ${p.display_name || p.name}`;
+        btn.addEventListener('click', () => startOAuth(p.name));
+        row.appendChild(btn);
+      });
+    } catch {
+      /* OAuth не настроен на сервере */
+    }
+  }
+
+  async function startOAuth(provider) {
+    hideAlert();
+    try {
+      const { authorize_url, state } = await api().getOAuthAuthorizeUrl(provider);
+      window.TurraAuth.saveOAuthState(provider, state);
+      window.location.href = authorize_url;
+    } catch (err) {
+      showAlert(window.TurraAuth.authErrorMessage(err));
+    }
   }
 
   async function initTelegramWidget() {
@@ -101,10 +209,7 @@
       try {
         if (cfg().mode === 'auth') {
           const auth = await api().loginTelegramWidget(user);
-          api().storage.access = auth.access_token;
-          api().storage.refresh = auth.refresh_token;
-          state.user = auth.user;
-          await afterLogin();
+          await handleAuthSuccess(auth);
         } else {
           state.user = {
             first_name: user.first_name,
@@ -133,14 +238,22 @@
   function renderUserChip() {
     const u = state.user;
     if (!u) return;
-    const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'Пользователь';
-    $('user-name').textContent = name + (u.username ? ` (@${u.username})` : '');
+    const name =
+      [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+      u.username ||
+      u.email ||
+      'Пользователь';
+    $('user-name').textContent =
+      name + (u.username ? ` (@${u.username})` : u.email ? ` (${u.email})` : '');
     const balance = u.balance_kopeks ?? state.purchaseOptions?.balance_kopeks;
     $('user-balance').textContent =
       balance != null ? `Баланс: ${formatRub(balance)}` : 'Вы вошли';
     $('user-avatar').textContent = (name[0] || '?').toUpperCase();
     $('user-chip').classList.remove('hidden');
-    $('telegram-login').classList.add('hidden');
+    $('auth-tabs')?.classList.add('hidden');
+    $('auth-telegram')?.classList.add('hidden');
+    $('auth-email')?.classList.add('hidden');
+    $('oauth-providers')?.classList.add('hidden');
     $('btn-logout').classList.remove('hidden');
     $('panel-subtitle').textContent = 'Выберите тариф и оплатите подписку';
   }
@@ -571,8 +684,10 @@
 
   async function boot() {
     await initLinks();
+    initAuthTabs();
     $('btn-pay').addEventListener('click', handlePay);
     $('btn-logout').addEventListener('click', logout);
+    await initOAuthProviders();
     await initTelegramWidget();
     await resumeSession();
   }

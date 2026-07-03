@@ -3,67 +3,167 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Turra — быстрое и стабильное подключение. Купите подписку онлайн и подключитесь за минуту." />
-    <meta name="theme-color" content="#080611" />
-    <title>Turra — купить подписку</title>
+    <meta name="description" content="Turra — стильное приложение для Windows. Купите подписку и подключитесь за минуту." />
+    <meta name="theme-color" content="#06040f" />
+    <title>Turra — подключение без лишнего</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
     <script src="config.js"></script>
     <script src="api.js"></script>
+    <script src="auth-common.js"></script>
   </head>
   <body>
+    <div class="ambient" aria-hidden="true">
+      <div class="ambient__cat"></div>
+      <div class="ambient__orb ambient__orb--1"></div>
+      <div class="ambient__orb ambient__orb--2"></div>
+      <div class="ambient__orb ambient__orb--3"></div>
+      <div class="ambient__grid"></div>
+      <div class="ambient__noise"></div>
+    </div>
+
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="#">
-          <img src="assets/cat-logo.png" alt="Turra" width="42" height="42" />
-          <span>Turra</span>
+        <a class="brand" href="#top">
+          <span class="brand-glow">
+            <img src="assets/cat-logo.png" alt="" width="44" height="44" />
+          </span>
+          <span class="brand-text">Turra</span>
         </a>
+        <nav class="header-nav">
+          <a href="#app">Приложение</a>
+          <a href="#download">Скачать</a>
+          <a href="#buy">Тарифы</a>
+        </nav>
         <div class="header-actions">
           <a class="btn btn-ghost btn-sm" id="link-support" href="#" target="_blank" rel="noopener">Поддержка</a>
-          <a class="btn btn-secondary btn-sm" id="link-bot" href="#" target="_blank" rel="noopener">Telegram</a>
           <a class="btn btn-primary btn-sm" href="#buy">Купить</a>
         </div>
       </div>
     </header>
 
-    <main class="container">
-      <section class="hero">
-        <div>
-          <div class="hero-badges">
-            <span class="badge">Оплата на сайте</span>
-            <span class="badge">Серверы в Европе</span>
-            <span class="badge">Приложение для Windows</span>
-          </div>
-          <h1>Turra.<br />Подключение за минуту.</h1>
-          <p>
-            Войдите через Telegram, выберите тариф и оплатите. После оплаты получите ключ
-            и откройте его в приложении Turra.
+    <main id="top">
+      <section class="hero container">
+        <div class="hero__copy reveal">
+          <p class="eyebrow">Приложение для Windows</p>
+          <h1 class="hero__title">
+            <span class="hero__title-line">Быстро.</span>
+            <span class="hero__title-line hero__title-line--accent">Красиво.</span>
+            <span class="hero__title-line">Turra.</span>
+          </h1>
+          <p class="hero__lead">
+            Оплата на сайте, ключ за минуту, подключение в один клик.
+            Серверы в Европе и США — выбирай сам или доверься автовыбору.
           </p>
-          <a class="btn btn-primary" href="#buy">Выбрать тариф</a>
+          <div class="hero__cta">
+            <a class="btn btn-primary btn-lg btn-shine" href="#buy">Купить подписку</a>
+            <a class="btn btn-glass btn-lg" id="btn-download-hero" href="#download">Скачать для Windows</a>
+          </div>
+          <div class="hero__stats">
+            <div><strong>1 клик</strong><span>подключение</span></div>
+            <div><strong>Авто</strong><span>лучший сервер</span></div>
+            <div><strong>24/7</strong><span>поддержка</span></div>
+          </div>
         </div>
-        <div class="hero-card">
-          <h3>Как это работает</h3>
-          <p style="color: var(--muted); margin: 0">Всё онлайн — без лишних шагов</p>
-          <ul>
-            <li><strong>1.</strong> Войдите через Telegram</li>
-            <li><strong>2.</strong> Выберите тариф и срок</li>
-            <li><strong>3.</strong> Оплатите удобным способом</li>
-            <li><strong>4.</strong> Получите ключ и откройте в приложении</li>
-          </ul>
+
+        <div class="hero__visual reveal" style="--reveal-delay: 0.15s">
+          <div class="phone-mock phone-mock--hero">
+            <div class="phone-mock__shine"></div>
+            <img src="assets/screenshots/app-home.png" alt="Главный экран Turra" width="380" height="780" />
+          </div>
+          <div class="hero__badge">
+            <span class="pulse-dot"></span>
+            Подключено
+          </div>
         </div>
       </section>
 
-      <section class="purchase-section" id="buy">
-        <div class="panel">
+      <section class="showcase" id="app">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="eyebrow">Интерфейс</p>
+            <h2 class="section-title">Приложение, в которое<br />хочется заходить</h2>
+            <p class="section-lead">Тёмная тема, живые статусы, пинг серверов и умный автовыбор.</p>
+          </div>
+
+          <div class="showcase-track">
+            <article class="showcase-card reveal showcase-card--left">
+              <div class="showcase-card__frame">
+                <div class="showcase-card__glow"></div>
+                <img src="assets/screenshots/app-home.png" alt="Экран подключения Turra" loading="lazy" />
+              </div>
+              <div class="showcase-card__info">
+                <span class="tag">Главная</span>
+                <h3>Одна кнопка — и ты в сети</h3>
+                <p>Статус, трафик и таймер сессии всегда перед глазами. Подключение без лишних экранов.</p>
+              </div>
+            </article>
+
+            <article class="showcase-card reveal showcase-card--right">
+              <div class="showcase-card__frame">
+                <div class="showcase-card__glow showcase-card__glow--alt"></div>
+                <img src="assets/screenshots/app-servers.png" alt="Список серверов Turra" loading="lazy" />
+              </div>
+              <div class="showcase-card__info">
+                <span class="tag">Серверы</span>
+                <h3>Выбор или автопилот</h3>
+                <p>Германия, Финляндия, Нидерланды, США — с пингом в реальном времени. Режим «Авто» сам найдёт лучший.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="download-section" id="download">
+        <div class="container">
+          <div class="download-panel reveal">
+            <div class="download-panel__glow" aria-hidden="true"></div>
+            <div class="download-panel__content">
+              <div class="download-panel__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                  <path d="M3 12.5l9-9 9 9M12 3.5v17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <p class="eyebrow eyebrow--light">Windows 10 / 11</p>
+                <h2 class="download-panel__title">Скачай Turra</h2>
+                <p class="download-panel__text">
+                  Один файл — без установщика и лишних галочек. Запустил, вставил ключ, подключился.
+                </p>
+                <ul class="download-panel__list">
+                  <li>~80 МБ, portable exe</li>
+                  <li>Работает из трея</li>
+                  <li>Deep link из сайта и Telegram</li>
+                </ul>
+              </div>
+              <div class="download-panel__action">
+                <a class="btn btn-download btn-lg" id="btn-download-main" href="#" download>
+                  <span class="btn-download__win" aria-hidden="true">⊞</span>
+                  Скачать для Windows
+                </a>
+                <p class="download-panel__hint">TurraVPN.exe · бесплатно</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="purchase-section container" id="buy">
+        <div class="section-head reveal">
+          <p class="eyebrow">Подписка</p>
+          <h2 class="section-title">Оформление за пару минут</h2>
+        </div>
+
+        <div class="panel glass-panel reveal">
           <div class="panel-header">
             <div>
-              <h2>Оформление подписки</h2>
-              <p id="panel-subtitle">Войдите через Telegram, чтобы продолжить</p>
+              <h2 class="panel-title">Купить доступ</h2>
+              <p id="panel-subtitle" class="panel-sub">Войдите, чтобы продолжить</p>
             </div>
             <button class="btn btn-ghost btn-sm hidden" id="btn-logout" type="button">Выйти</button>
           </div>
@@ -78,11 +178,56 @@
           <div id="alert" class="alert hidden"></div>
 
           <div id="step-login" class="section-block">
-            <h3>Войти через Telegram</h3>
-            <p style="color: var(--muted); margin: 0 0 16px">
-              Быстрый вход — без пароля и регистрации.
-            </p>
-            <div id="telegram-login"></div>
+            <h3 class="block-title">Вход или регистрация</h3>
+
+            <div class="auth-tabs" id="auth-tabs">
+              <button type="button" class="auth-tab active" data-tab="telegram">Telegram</button>
+              <button type="button" class="auth-tab" data-tab="email">Почта</button>
+            </div>
+
+            <div id="auth-telegram" class="auth-pane">
+              <p class="auth-hint">Быстрый вход через Telegram.</p>
+              <div id="telegram-login"></div>
+            </div>
+
+            <div id="auth-email" class="auth-pane hidden">
+              <div class="auth-email-toggle">
+                <button type="button" class="auth-subtab active" data-email-mode="login">Вход</button>
+                <button type="button" class="auth-subtab" data-email-mode="register">Регистрация</button>
+              </div>
+
+              <form id="form-email-login" class="auth-form" autocomplete="on">
+                <label class="field">
+                  <span>Email</span>
+                  <input type="email" name="email" required placeholder="you@mail.ru" />
+                </label>
+                <label class="field">
+                  <span>Пароль</span>
+                  <input type="password" name="password" required minlength="8" placeholder="Минимум 8 символов" />
+                </label>
+                <button type="submit" class="btn btn-primary" style="width: 100%">Войти</button>
+              </form>
+
+              <form id="form-email-register" class="auth-form hidden" autocomplete="on">
+                <label class="field">
+                  <span>Имя</span>
+                  <input type="text" name="first_name" placeholder="Как к вам обращаться" />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input type="email" name="email" required placeholder="you@mail.ru" />
+                </label>
+                <label class="field">
+                  <span>Пароль</span>
+                  <input type="password" name="password" required minlength="8" placeholder="Минимум 8 символов" />
+                </label>
+                <button type="submit" class="btn btn-primary" style="width: 100%">Зарегистрироваться</button>
+                <p class="auth-hint">На почту придёт ссылка для подтверждения.</p>
+              </form>
+            </div>
+
+            <div id="oauth-providers" class="oauth-row hidden"></div>
+
             <div id="user-chip" class="user-chip hidden">
               <div class="avatar" id="user-avatar">?</div>
               <div>
@@ -93,19 +238,17 @@
           </div>
 
           <div id="step-tariff" class="section-block hidden">
-            <h3>Выберите тариф и период</h3>
+            <h3 class="block-title">Выберите тариф и период</h3>
             <div class="tariff-grid" id="tariff-grid"></div>
           </div>
 
           <div id="step-payment" class="section-block hidden">
-            <h3>Способ оплаты</h3>
+            <h3 class="block-title">Способ оплаты</h3>
             <div class="payment-grid" id="payment-grid"></div>
             <div class="sub-options hidden" id="sub-options"></div>
             <div style="margin-top: 20px">
               <div id="checkout-summary" style="color: var(--muted); margin-bottom: 12px"></div>
-              <button class="btn btn-primary" id="btn-pay" type="button" disabled>
-                Перейти к оплате
-              </button>
+              <button class="btn btn-primary" id="btn-pay" type="button" disabled>Перейти к оплате</button>
             </div>
             <div id="payment-wait" class="hidden" style="margin-top: 20px">
               <div class="status-row">
@@ -120,12 +263,12 @@
 
           <div id="step-done" class="section-block hidden">
             <div class="alert alert-success">Готово! Скопируйте ключ или откройте его в приложении.</div>
-            <h3>Ваш ключ подключения</h3>
+            <h3 class="block-title">Ваш ключ подключения</h3>
             <div class="link-box">
               <input id="sub-link" type="text" readonly />
               <button class="btn btn-secondary" id="btn-copy" type="button">Копировать</button>
             </div>
-            <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap">
+            <div class="done-actions">
               <button class="btn btn-primary" id="btn-open-app" type="button">Открыть в Turra</button>
               <a class="btn btn-secondary" id="btn-download" href="#" download>Скачать приложение</a>
             </div>
@@ -146,5 +289,6 @@
     </footer>
 
     <script src="app.js"></script>
+    <script src="effects.js"></script>
   </body>
 </html>

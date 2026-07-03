@@ -23,6 +23,7 @@ window.TURRA_CONFIG = {
   supportUrl: 'https://t.me/turravpn_sup',
   /** Залей TurraVPN.exe в корень сайта на Timeweb */
   downloadUrl: 'https://buy.turrasup.ru/TurraVPN.exe',
+  downloadFileName: 'TurraVPN.exe',
 
   /** Deep link для Windows-клиента */
   deepLinkScheme: 'turravpn',
