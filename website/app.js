@@ -24,7 +24,7 @@
   function showAlert(msg, type = 'error') {
     const el = $('alert');
     el.textContent = msg;
-    el.className = `alert alert-${type}`;
+    el.className = `alert ${type === 'success' || type === 'info' ? 'alert--ok' : ''}`;
     el.classList.remove('hidden');
   }
 
@@ -35,7 +35,7 @@
   function setStep(step) {
     const order = ['login', 'tariff', 'payment', 'done'];
     const idx = order.indexOf(step);
-    document.querySelectorAll('.step-pill').forEach((pill) => {
+    document.querySelectorAll('.step').forEach((pill) => {
       const s = pill.dataset.step;
       const i = order.indexOf(s);
       pill.classList.toggle('active', s === step);
@@ -302,27 +302,43 @@
     return state.purchaseOptions?.tariffs?.filter((t) => t.is_available) || [];
   }
 
-  function renderTariffCard(tariff, container) {
-    const card = document.createElement('div');
-    card.className = 'tariff-card';
+  function renderTariffCard(tariff, container, index) {
+    const card = document.createElement('article');
+    card.className = 'plan-card glass';
+    if (index === 1) card.classList.add('plan-card--featured');
     card.dataset.id = String(tariff.id);
 
     const traffic =
       tariff.is_unlimited_traffic || tariff.traffic_limit_gb >= 99999
-        ? 'Безлимит'
-        : `${tariff.traffic_limit_gb} ГБ`;
-    card.innerHTML = `
-      <h4>${escapeHtml(tariff.name)}</h4>
-      <div class="tariff-meta">${traffic} · ${tariff.device_limit} устр.</div>
-      <div class="period-list"></div>
-    `;
+        ? 'Безлимит трафика'
+        : `${tariff.traffic_limit_gb} ГБ трафика`;
 
     const periods = tariff.periods || [];
+    const mainPeriod = periods[0];
+    const priceLabel = mainPeriod
+      ? mainPeriod.price_label || formatRub(mainPeriod.price_kopeks)
+      : '—';
+    const periodSuffix = mainPeriod?.days >= 360 ? '' : '/мес';
+
+    card.innerHTML = `
+      ${index === 1 ? '<span class="plan-badge">Популярный</span>' : ''}
+      <h4 class="plan-name">${escapeHtml(tariff.name)}</h4>
+      <div class="plan-price">${escapeHtml(priceLabel)}<span class="plan-period">${periodSuffix}</span></div>
+      <ul class="plan-features">
+        <li>${traffic}</li>
+        <li>До ${tariff.device_limit} устройств</li>
+        <li>Серверы Европа и США</li>
+        <li>Поддержка 24/7</li>
+      </ul>
+      <div class="period-list"></div>
+      <button type="button" class="btn btn--primary btn--wide plan-select">Выбрать план</button>
+    `;
+
     const periodList = card.querySelector('.period-list');
-    periods.forEach((p) => {
+    periods.forEach((p, i) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'period-btn';
+      btn.className = `period-btn${i === 0 ? ' selected' : ''}`;
       btn.dataset.days = String(p.days);
       btn.dataset.price = String(p.price_kopeks);
       btn.textContent = `${p.label} — ${p.price_label || formatRub(p.price_kopeks)}`;
@@ -333,8 +349,12 @@
       periodList.appendChild(btn);
     });
 
-    card.addEventListener('click', () => {
-      if (periods[0]) selectTariff(tariff.id, periods[0].days, periods[0].price_kopeks, card, periodList.firstChild);
+    card.querySelector('.plan-select').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (periods[0]) {
+        const firstBtn = periodList.querySelector('.period-btn');
+        selectTariff(tariff.id, periods[0].days, periods[0].price_kopeks, card, firstBtn);
+      }
     });
 
     container.appendChild(card);
@@ -343,7 +363,9 @@
   function renderTariffs(tariffs) {
     const grid = $('tariff-grid');
     grid.innerHTML = '';
-    tariffs.filter((t) => t.is_available !== false).forEach((t) => renderTariffCard(t, grid));
+    tariffs
+      .filter((t) => t.is_available !== false)
+      .forEach((t, i) => renderTariffCard(t, grid, i));
   }
 
   function renderLandingTariffs(tariffs) {
@@ -360,7 +382,7 @@
     state.selectedPeriodDays = days;
     state.selectedPriceKopeks = priceKopeks;
 
-    document.querySelectorAll('.tariff-card').forEach((c) => c.classList.remove('selected'));
+    document.querySelectorAll('.plan-card').forEach((c) => c.classList.remove('selected'));
     document.querySelectorAll('.period-btn').forEach((b) => b.classList.remove('selected'));
     cardEl.classList.add('selected');
     if (periodBtn) periodBtn.classList.add('selected');
