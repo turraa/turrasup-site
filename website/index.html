@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TurraVPN — быстрый VPN без блокировок. Купите подписку онлайн и подключитесь за минуту." />
+    <meta name="theme-color" content="#080611" />
+    <title>TurraVPN — купить подписку</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#">
+          <img src="assets/cat-logo.png" alt="TurraVPN" width="42" height="42" />
+          <span>TurraVPN</span>
+        </a>
+        <div class="header-actions">
+          <a class="btn btn-ghost btn-sm" id="link-support" href="#" target="_blank" rel="noopener">Поддержка</a>
+          <a class="btn btn-secondary btn-sm" id="link-bot" href="#" target="_blank" rel="noopener">Telegram-бот</a>
+          <a class="btn btn-primary btn-sm" href="#buy">Купить</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <div class="hero-badges">
+            <span class="badge">Без VPN для покупки</span>
+            <span class="badge">Синхронизация с ботом</span>
+            <span class="badge">Windows-клиент</span>
+          </div>
+          <h1>Быстрый VPN.<br />Оплата на сайте — ключ сразу.</h1>
+          <p>
+            Войдите через Telegram, выберите тариф и оплатите. Аккаунт попадёт в ту же базу, что и в
+            боте — после оплаты получите ссылку подписки Remnawave и откроете её в TurraVPN.
+          </p>
+          <a class="btn btn-primary" href="#buy">Выбрать тариф</a>
+        </div>
+        <div class="hero-card">
+          <h3>Как это работает</h3>
+          <p style="color: var(--muted); margin: 0">Тот же бэкенд Bedolaga, что и в @TurraVpnbot</p>
+          <ul>
+            <li><strong>1.</strong> Вход через Telegram — аккаунт в БД бота</li>
+            <li><strong>2.</strong> Выбор тарифа и способа оплаты</li>
+            <li><strong>3.</strong> Ссылка на оплату прямо на сайте</li>
+            <li><strong>4.</strong> Ссылка подписки + кнопка «Открыть в TurraVPN»</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="purchase-section" id="buy">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Покупка подписки</h2>
+              <p id="panel-subtitle">Войдите через Telegram, чтобы продолжить</p>
+            </div>
+            <button class="btn btn-ghost btn-sm hidden" id="btn-logout" type="button">Выйти</button>
+          </div>
+
+          <div class="steps" id="steps">
+            <span class="step-pill active" data-step="login">1. Вход</span>
+            <span class="step-pill" data-step="tariff">2. Тариф</span>
+            <span class="step-pill" data-step="payment">3. Оплата</span>
+            <span class="step-pill" data-step="done">4. Готово</span>
+          </div>
+
+          <div id="alert" class="alert hidden"></div>
+
+          <!-- Step: Login -->
+          <div id="step-login" class="section-block">
+            <h3>Войти через Telegram</h3>
+            <p style="color: var(--muted); margin: 0 0 16px">
+              Используется тот же аккаунт, что в Telegram-боте. Покупки и подписка синхронизируются.
+            </p>
+            <div id="telegram-login"></div>
+            <div id="user-chip" class="user-chip hidden">
+              <div class="avatar" id="user-avatar">?</div>
+              <div>
+                <div id="user-name" style="font-weight: 600"></div>
+                <div id="user-balance" style="color: var(--muted); font-size: 0.85rem"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step: Tariffs -->
+          <div id="step-tariff" class="section-block hidden">
+            <h3>Выберите тариф и период</h3>
+            <div class="tariff-grid" id="tariff-grid"></div>
+          </div>
+
+          <!-- Step: Payment -->
+          <div id="step-payment" class="section-block hidden">
+            <h3>Способ оплаты</h3>
+            <div class="payment-grid" id="payment-grid"></div>
+            <div class="sub-options hidden" id="sub-options"></div>
+            <div style="margin-top: 20px">
+              <div id="checkout-summary" style="color: var(--muted); margin-bottom: 12px"></div>
+              <button class="btn btn-primary" id="btn-pay" type="button" disabled>
+                Перейти к оплате
+              </button>
+            </div>
+            <div id="payment-wait" class="hidden" style="margin-top: 20px">
+              <div class="status-row">
+                <div class="spinner"></div>
+                <span id="payment-status-text">Ожидаем оплату…</span>
+              </div>
+              <button class="btn btn-secondary" id="btn-open-payment" type="button" style="margin-top: 12px">
+                Открыть страницу оплаты
+              </button>
+            </div>
+          </div>
+
+          <!-- Step: Success -->
+          <div id="step-done" class="section-block hidden">
+            <div class="alert alert-success">Подписка активирована! Скопируйте ссылку или откройте в приложении.</div>
+            <h3>Ваша ссылка подписки</h3>
+            <div class="link-box">
+              <input id="sub-link" type="text" readonly />
+              <button class="btn btn-secondary" id="btn-copy" type="button">Копировать</button>
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap">
+              <button class="btn btn-primary" id="btn-open-app" type="button">Открыть в TurraVPN</button>
+              <a class="btn btn-secondary" id="btn-download" href="#" download>Скачать TurraVPN.exe</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>© TurraVPN</span>
+        <span>
+          <a id="footer-bot" href="#" target="_blank" rel="noopener">Telegram-бот</a>
+          ·
+          <a id="footer-support" href="#" target="_blank" rel="noopener">Поддержка</a>
+        </span>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
