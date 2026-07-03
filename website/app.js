@@ -452,7 +452,7 @@
     }
   }
 
-  function paymentMethodString() {
+  function paymentMethodStringForLanding() {
     let m = state.selectedMethod;
     if (state.selectedSubOption) m = `${m}_${state.selectedSubOption}`;
     return m;
@@ -493,7 +493,11 @@
     }
 
     const topUpAmount = price - balance;
-    const topUp = await api().createTopUp(topUpAmount, paymentMethodString());
+    const topUp = await api().createTopUp(
+      topUpAmount,
+      state.selectedMethod,
+      state.selectedSubOption || undefined,
+    );
     state.paymentUrl = topUp.payment_url;
     state.paymentMeta = {
       method: state.selectedMethod,
@@ -514,7 +518,7 @@
       period_days: state.selectedPeriodDays,
       contact_type: 'telegram',
       contact_value: contact,
-      payment_method: paymentMethodString(),
+      payment_method: paymentMethodStringForLanding(),
       is_gift: false,
     });
 
