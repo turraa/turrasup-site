@@ -137,7 +137,7 @@
     $('user-name').textContent = name + (u.username ? ` (@${u.username})` : '');
     const balance = u.balance_kopeks ?? state.purchaseOptions?.balance_kopeks;
     $('user-balance').textContent =
-      balance != null ? `Баланс: ${formatRub(balance)}` : 'Аккаунт привязан к Telegram';
+      balance != null ? `Баланс: ${formatRub(balance)}` : 'Вы вошли';
     $('user-avatar').textContent = (name[0] || '?').toUpperCase();
     $('user-chip').classList.remove('hidden');
     $('telegram-login').classList.add('hidden');
@@ -151,7 +151,7 @@
       const opts = await api().getPurchaseOptions();
       state.purchaseOptions = opts;
       if (opts.sales_mode !== 'tariffs' || !opts.tariffs?.length) {
-        showAlert('Тарифы недоступны. Проверьте настройки Bedolaga (SALES_MODE=tariffs).', 'info');
+        showAlert('Тарифы временно недоступны. Попробуйте позже или напишите в поддержку.', 'info');
         return;
       }
       state.paymentMethods = await api().getPaymentMethods();
@@ -171,7 +171,7 @@
     renderUserChip();
     const slug = cfg().landingSlug;
     if (!slug) {
-      showAlert('Укажите landingSlug в config.js (создайте лендинг в админке Bedolaga)', 'info');
+      showAlert('Покупка временно недоступна. Напишите в поддержку.', 'info');
       return;
     }
     try {
@@ -180,7 +180,7 @@
       state.paymentMethods = state.landingConfig.payment_methods;
       setStep('tariff');
     } catch (e) {
-      showAlert(e.message || 'Лендинг не найден. Создайте его в админке Bedolaga.');
+      showAlert('Не удалось загрузить тарифы. Попробуйте позже или напишите в поддержку.');
     }
   }
 
@@ -262,7 +262,7 @@
     grid.innerHTML = '';
 
     if (!methods.length) {
-      grid.innerHTML = '<p style="color:var(--muted)">Способы оплаты не настроены в Bedolaga.</p>';
+      grid.innerHTML = '<p style="color:var(--muted)">Способы оплаты временно недоступны. Напишите в поддержку.</p>';
       return;
     }
 
@@ -432,7 +432,7 @@
 
   async function pollLanding(token) {
     let status = await api().getLandingPurchaseStatus(token);
-    $('payment-status-text').textContent = `Статус: ${status.status}`;
+    $('payment-status-text').textContent = 'Проверяем оплату…';
 
     if (status.status === 'pending_activation') {
       status = await api().activateLandingPurchase(token);
@@ -482,7 +482,7 @@
     else {
       const sub = await api().getSubscription();
       if (sub.subscription?.subscription_url) showSubscriptionLink(sub.subscription.subscription_url);
-      else showAlert('Подписка оформлена, но ссылка пока недоступна. Проверьте кабинет или бота.', 'info');
+      else showAlert('Подписка оформлена. Ключ появится через минуту — обновите страницу или напишите в поддержку.', 'info');
     }
   }
 
