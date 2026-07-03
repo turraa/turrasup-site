@@ -73,6 +73,42 @@
     sessionStorage.removeItem('turravpn_pending');
   }
 
+  function savePaymentMeta(meta) {
+    sessionStorage.setItem('turravpn_payment', JSON.stringify(meta));
+  }
+
+  function loadPaymentMeta() {
+    try {
+      return JSON.parse(sessionStorage.getItem('turravpn_payment') || 'null');
+    } catch {
+      return null;
+    }
+  }
+
+  function clearPaymentMeta() {
+    sessionStorage.removeItem('turravpn_payment');
+  }
+
+  function isTelegramWebApp() {
+    return !!(window.Telegram?.WebApp?.initData);
+  }
+
+  function methodId(m) {
+    return m.method_id || m.id;
+  }
+
+  function isWebPaymentMethod(m) {
+    const id = String(methodId(m) || '').toLowerCase();
+    if (!isTelegramWebApp() && (id === 'telegram_stars' || id.includes('stars'))) return false;
+    return m.is_available !== false;
+  }
+
+  function resetPaymentWaitUi() {
+    $('payment-wait').classList.add('hidden');
+    $('btn-pay').classList.remove('hidden');
+    $('btn-pay').disabled = false;
+  }
+
   async function initLinks() {
     const c = cfg();
     const set = (id, url) => {
@@ -392,17 +428,26 @@
   }
 
   function renderPaymentMethods() {
-    const methods = (state.paymentMethods || []).filter((m) => m.is_available !== false);
+    const methods = (state.paymentMethods || []).filter(isWebPaymentMethod);
     const grid = $('payment-grid');
     grid.innerHTML = '';
 
     if (!methods.length) {
       grid.innerHTML = '<p style="color:var(--muted)">Способы оплаты временно недоступны. Напишите в поддержку.</p>';
+      state.selectedMethod = null;
+      state.selectedSubOption = null;
+      $('btn-pay').disabled = true;
       return;
     }
 
-    methods.forEach((m, i) => {
-      const id = m.method_id || m.id;
+    const prefer = methods.find((m) => {
+      const id = String(methodId(m)).toLowerCase();
+      return id === 'yookassa' || id === 'platega';
+    });
+    let selectedCard = null;
+
+    methods.forEach((m) => {
+      const id = methodId(m);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'payment-card';
@@ -411,8 +456,10 @@
         <div class="desc">${escapeHtml(m.description || '')}</div>`;
       card.addEventListener('click', () => selectPaymentMethod(m, card));
       grid.appendChild(card);
-      if (i === 0) selectPaymentMethod(m, card);
+      if (!selectedCard && prefer && methodId(prefer) === id) selectedCard = card;
     });
+
+    selectPaymentMethod(prefer || methods[0], selectedCard || grid.firstChild);
 
     const tariff = getTariffsList().find((t) => t.id === state.selectedTariffId);
     const period = tariff?.periods?.find((p) => p.days === state.selectedPeriodDays);
@@ -422,7 +469,7 @@
   }
 
   function selectPaymentMethod(method, cardEl) {
-    state.selectedMethod = method.method_id || method.id;
+    state.selectedMethod = methodId(method);
     document.querySelectorAll('.payment-card').forEach((c) => c.classList.remove('selected'));
     cardEl.classList.add('selected');
 
@@ -458,19 +505,40 @@
     return m;
   }
 
+  async function ensurePaymentMethodReady() {
+    if (!state.selectedMethod) {
+      throw new Error('Выберите способ оплаты');
+    }
+    const fresh = await api().getPaymentMethods();
+    state.paymentMethods = fresh;
+    const current = fresh.find((m) => methodId(m) === state.selectedMethod);
+    if (!current || !isWebPaymentMethod(current)) {
+      renderPaymentMethods();
+      throw new Error('Этот способ оплаты недоступен на сайте. Выберите YooKassa или Platega.');
+    }
+    if (current.options?.length || current.sub_options?.length) {
+      const opts = current.sub_options || current.options;
+      const ok = opts.some((o) => o.id === state.selectedSubOption);
+      if (!ok) state.selectedSubOption = opts[0]?.id || null;
+    }
+  }
+
   async function handlePay() {
     hideAlert();
     $('btn-pay').disabled = true;
 
     try {
+      await ensurePaymentMethodReady();
       if (cfg().mode === 'landing') {
         await payLanding();
       } else {
         await payAuth();
       }
     } catch (e) {
+      clearPendingPurchase();
+      clearPaymentMeta();
+      resetPaymentWaitUi();
       showAlert(e.message || 'Ошибка при создании оплаты');
-      $('btn-pay').disabled = false;
     }
   }
 
@@ -478,15 +546,10 @@
     const price = state.selectedPriceKopeks;
     const balance = state.purchaseOptions?.balance_kopeks ?? state.user?.balance_kopeks ?? 0;
 
-    savePendingPurchase({
-      tariffId: state.selectedTariffId,
-      periodDays: state.selectedPeriodDays,
-      priceKopeks: price,
-    });
-
     if (balance >= price) {
       const result = await api().purchaseTariff(state.selectedTariffId, state.selectedPeriodDays);
       clearPendingPurchase();
+      clearPaymentMeta();
       await showSubscriptionFromApi();
       showAlert(result.message || 'Подписка оформлена!', 'success');
       return;
@@ -498,12 +561,25 @@
       state.selectedMethod,
       state.selectedSubOption || undefined,
     );
+
+    if (!topUp?.payment_url) {
+      throw new Error('Не удалось получить ссылку на оплату. Попробуйте другой способ.');
+    }
+
+    savePendingPurchase({
+      tariffId: state.selectedTariffId,
+      periodDays: state.selectedPeriodDays,
+      priceKopeks: price,
+    });
+
     state.paymentUrl = topUp.payment_url;
     state.paymentMeta = {
       method: state.selectedMethod,
       paymentId: topUp.payment_id,
       mode: 'auth',
+      paymentUrl: topUp.payment_url,
     };
+    savePaymentMeta(state.paymentMeta);
     showPaymentWait();
     startPaymentPolling();
   }
@@ -580,6 +656,7 @@
     if (status.status === 'delivered' && status.subscription_url) {
       stopPolling();
       clearPendingPurchase();
+      clearPaymentMeta();
       showSubscriptionLink(status.subscription_url);
     } else if (status.status === 'failed' || status.status === 'expired') {
       stopPolling();
@@ -605,6 +682,7 @@
         await api().purchaseTariff(pending.tariffId, pending.periodDays);
         stopPolling();
         clearPendingPurchase();
+        clearPaymentMeta();
         await showSubscriptionFromApi();
       } catch (e) {
         if (!e.message?.includes('уже')) throw e;
@@ -657,6 +735,7 @@
     stopPolling();
     api().storage.clear();
     clearPendingPurchase();
+    clearPaymentMeta();
     state.user = null;
     state.purchaseOptions = null;
     location.reload();
@@ -687,14 +766,21 @@
       }
 
       if (pending?.tariffId) {
-        state.selectedTariffId = pending.tariffId;
-        state.selectedPeriodDays = pending.periodDays;
-        state.selectedPriceKopeks = pending.priceKopeks;
-        setStep('payment');
-        $('payment-wait').classList.remove('hidden');
-        $('btn-pay').classList.add('hidden');
-        startPaymentPolling();
-        return;
+        const meta = loadPaymentMeta();
+        if (meta?.paymentId && meta?.paymentUrl) {
+          state.selectedTariffId = pending.tariffId;
+          state.selectedPeriodDays = pending.periodDays;
+          state.selectedPriceKopeks = pending.priceKopeks;
+          state.paymentMeta = meta;
+          state.paymentUrl = meta.paymentUrl;
+          renderPaymentMethods();
+          setStep('payment');
+          showPaymentWait();
+          startPaymentPolling();
+          return;
+        }
+        clearPendingPurchase();
+        clearPaymentMeta();
       }
 
       if (sub.has_subscription && sub.subscription?.subscription_url) {
