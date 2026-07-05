@@ -126,7 +126,8 @@
       localStorage.removeItem('turravpn_access');
     }
 
-    if (!api().storage.access) {
+    const restored = await api().restoreSession();
+    if (!restored && !api().storage.access) {
       location.replace('/#buy');
       return;
     }
@@ -145,6 +146,20 @@
       renderProfile(user, subscription, opts?.balance_kopeks);
     } catch (e) {
       if (e?.status === 401) {
+        const again = await api().restoreSession();
+        if (again) {
+          try {
+            const [me, subscription, opts] = await Promise.all([
+              api().getMe(),
+              api().getSubscription(),
+              api().getPurchaseOptions().catch(() => null),
+            ]);
+            renderProfile(me.user || me, subscription, opts?.balance_kopeks);
+            return;
+          } catch {
+            /* fall through */
+          }
+        }
         api().storage.clear();
         location.replace('/#buy');
         return;

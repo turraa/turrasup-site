@@ -40,14 +40,20 @@
     },
   };
 
-  const AUTH_PREFIXES = [
-    '/cabinet/auth/',
-    '/cabinet/landing/',
-    '/cabinet/branding/',
+  const NO_REFRESH_PATHS = [
+    '/cabinet/auth/email/login',
+    '/cabinet/auth/email/register',
+    '/cabinet/auth/telegram/widget',
+    '/cabinet/auth/refresh',
+    '/cabinet/auth/email/verify',
+    '/cabinet/auth/password/forgot',
+    '/cabinet/auth/password/reset',
   ];
 
-  function isPublic(path) {
-    return AUTH_PREFIXES.some((p) => path.startsWith(p));
+  function shouldRetryRefresh(path) {
+    if (NO_REFRESH_PATHS.some((p) => path === p || path.startsWith(p))) return false;
+    if (path.includes('/cabinet/auth/oauth/') && path.includes('/callback')) return false;
+    return !!storage.refresh;
   }
 
   async function refreshToken() {
@@ -79,13 +85,13 @@
       headers[CSRF_HEADER] = ensureCsrf();
     }
 
-    if (!isPublic(path) && storage.access) {
+    if (storage.access) {
       headers.Authorization = `Bearer ${storage.access}`;
     }
 
     let res = await fetch(`${cfg().apiBase}${path}`, { ...options, method, headers });
 
-    if (res.status === 401 && !isPublic(path) && storage.refresh) {
+    if (res.status === 401 && shouldRetryRefresh(path)) {
       const token = await refreshToken();
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -115,8 +121,15 @@
     return data;
   }
 
+  async function restoreSession() {
+    if (storage.access) return true;
+    if (!storage.refresh) return false;
+    return !!(await refreshToken());
+  }
+
   window.TurraApi = {
     storage,
+    restoreSession,
 
     getWidgetConfig() {
       return request('/cabinet/branding/telegram-widget');

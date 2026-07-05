@@ -1055,7 +1055,8 @@
   }
 
   async function resumeSession() {
-    if (!api().storage.access) return;
+    const ok = await api().restoreSession();
+    if (!ok && !api().storage.access) return;
     try {
       if (cfg().mode === 'landing') {
         await afterLoginLanding();
