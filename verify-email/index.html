@@ -32,7 +32,8 @@
         <p class="sub-status" id="status">Подтверждаем ваш email…</p>
         <p id="success" class="alert alert--ok hidden"></p>
         <p id="error" class="alert hidden"></p>
-        <a id="continue" class="btn btn--primary btn--wide hidden" href="/#buy">Выбрать тариф</a>
+        <a id="continue" class="btn btn--primary btn--wide hidden" href="/profile/">Открыть личный кабинет</a>
+        <a id="continue-buy" class="btn btn--ghost btn--wide hidden" href="/#buy">Выбрать тариф</a>
       </div>
     </main>
     <script>
@@ -43,6 +44,7 @@
         const success = document.getElementById('success');
         const errorEl = document.getElementById('error');
         const cont = document.getElementById('continue');
+        const contBuy = document.getElementById('continue-buy');
 
         if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
           spinner.classList.add('hidden');
@@ -57,9 +59,10 @@
           TurraAuth.applyAuthResponse(auth);
           spinner.classList.add('hidden');
           status.textContent = '';
-          success.textContent = 'Почта подтверждена! Теперь можно выбрать тариф и оплатить подписку.';
+          success.textContent = 'Почта подтверждена! Можно открыть личный кабинет или выбрать тариф.';
           success.classList.remove('hidden');
           cont.classList.remove('hidden');
+          contBuy.classList.remove('hidden');
         } catch (e) {
           spinner.classList.add('hidden');
           status.textContent = '';
