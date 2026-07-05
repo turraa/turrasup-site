@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050508" />
+    <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <title>Turra — новый пароль</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css?v=5" />
+    <script src="/config.js"></script>
+    <script src="/security.js"></script>
+    <script src="/api.js"></script>
+    <script src="/auth-common.js"></script>
+  </head>
+  <body class="sub-page">
+    <div class="bg-glow" aria-hidden="true"></div>
+    <main class="sub-main">
+      <a class="sub-logo" href="/">
+        <img src="/assets/logo.svg" alt="" width="40" height="40" />
+        <span>Turra</span>
+      </a>
+      <div class="sub-card glass">
+        <h1>Новый пароль</h1>
+        <p class="sub-status" id="intro">Придумайте новый пароль для входа.</p>
+
+        <form id="form-reset" class="auth-form hidden">
+          <label class="field">
+            <span>Новый пароль</span>
+            <input type="password" name="password" required minlength="8" autocomplete="new-password" />
+          </label>
+          <label class="field">
+            <span>Повторите пароль</span>
+            <input type="password" name="password2" required minlength="8" autocomplete="new-password" />
+          </label>
+          <button type="submit" class="btn btn--primary btn--wide">Сохранить пароль</button>
+        </form>
+
+        <p id="success" class="alert alert--ok hidden"></p>
+        <p id="error" class="alert hidden"></p>
+        <a id="continue" class="btn btn--primary btn--wide hidden" href="/#buy">Войти и купить</a>
+      </div>
+    </main>
+    <script>
+      (async function () {
+        const token = new URLSearchParams(location.search).get('token');
+        const form = document.getElementById('form-reset');
+        const intro = document.getElementById('intro');
+        const success = document.getElementById('success');
+        const errorEl = document.getElementById('error');
+        const cont = document.getElementById('continue');
+
+        if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+          intro.textContent = '';
+          errorEl.textContent = 'Ссылка для сброса пароля недействительна или устарела.';
+          errorEl.classList.remove('hidden');
+          cont.textContent = 'На главную';
+          cont.href = '/';
+          cont.classList.remove('hidden');
+          return;
+        }
+
+        form.classList.remove('hidden');
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          success.classList.add('hidden');
+          errorEl.classList.add('hidden');
+
+          const fd = new FormData(form);
+          const p1 = fd.get('password');
+          const p2 = fd.get('password2');
+          if (p1 !== p2) {
+            errorEl.textContent = 'Пароли не совпадают.';
+            errorEl.classList.remove('hidden');
+            return;
+          }
+
+          const btn = form.querySelector('button[type=submit]');
+          btn.disabled = true;
+          try {
+            await TurraApi.resetPassword(token, p1);
+            form.classList.add('hidden');
+            intro.textContent = '';
+            success.textContent = 'Пароль обновлён. Теперь можно войти с новым паролем.';
+            success.classList.remove('hidden');
+            cont.classList.remove('hidden');
+          } catch (e) {
+            errorEl.textContent = TurraAuth.authErrorMessage(e);
+            errorEl.classList.remove('hidden');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
