@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=8" />
     <script src="config.js"></script>
     <script src="security.js"></script>
     <script src="api.js"></script>
@@ -47,10 +47,10 @@
             <a class="btn btn--primary btn--sm" href="#buy">Купить</a>
           </div>
           <div id="header-user" class="header-user hidden">
-            <button type="button" class="header-user__pill" id="btn-open-cabinet">
+            <a class="header-user__pill" id="btn-open-cabinet" href="/profile/">
               <span class="header-user__avatar" id="header-avatar">?</span>
               <span class="header-user__name" id="header-username">Кабинет</span>
-            </button>
+            </a>
             <a class="btn btn--primary btn--sm" href="#buy">Тарифы</a>
           </div>
         </div>
@@ -60,7 +60,7 @@
         <a href="#servers">Серверы</a>
         <a href="#buy">Тарифы</a>
         <a id="link-support-mobile" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
-        <a id="link-cabinet-mobile" class="hidden" href="#cabinet">Личный кабинет</a>
+        <a id="link-cabinet-mobile" class="hidden" href="/profile/">Личный кабинет</a>
         <a href="#buy">Купить</a>
       </nav>
     </header>
@@ -138,7 +138,14 @@
             </div>
 
             <div id="step-tariff" class="hidden">
-              <div class="tariff-grid tariff-grid--plans" id="tariff-grid"></div>
+              <div class="carousel carousel--checkout" id="tariff-carousel">
+                <button type="button" class="carousel__btn carousel__btn--prev" aria-label="Предыдущий тариф">‹</button>
+                <div class="carousel__viewport">
+                  <div class="carousel__track" id="tariff-grid"></div>
+                </div>
+                <button type="button" class="carousel__btn carousel__btn--next" aria-label="Следующий тариф">›</button>
+                <div class="carousel__dots"></div>
+              </div>
             </div>
 
             <div id="step-payment" class="hidden">
@@ -161,58 +168,9 @@
                 <button class="btn btn--ghost" id="btn-copy" type="button">Копировать</button>
               </div>
               <div class="row-btns">
-                <button class="btn btn--primary" id="btn-open-app" type="button">Открыть в Turra</button>
+                <button class="btn btn--primary" id="btn-open-app" type="button">Открыть в приложении</button>
                 <a class="btn btn--ghost" href="#download" data-scroll-download>Скачать приложение</a>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section hidden" id="cabinet">
-        <div class="wrap">
-          <div class="cabinet-card glass">
-            <div class="cabinet-card__head">
-              <div class="cabinet-user">
-                <div class="avatar cabinet-user__avatar" id="cabinet-avatar">?</div>
-                <div>
-                  <h2 class="h3 cabinet-user__name" id="cabinet-name">—</h2>
-                  <p class="muted small" id="cabinet-email"></p>
-                </div>
-              </div>
-              <button class="btn btn--ghost btn--sm" id="cabinet-logout" type="button">Выйти</button>
-            </div>
-
-            <div class="cabinet-stats">
-              <div class="cabinet-stat">
-                <span class="muted small">Баланс</span>
-                <strong id="cabinet-balance">—</strong>
-              </div>
-              <div class="cabinet-stat">
-                <span class="muted small">Подписка</span>
-                <strong id="cabinet-sub-status">—</strong>
-              </div>
-              <div class="cabinet-stat">
-                <span class="muted small">Действует до</span>
-                <strong id="cabinet-sub-expires">—</strong>
-              </div>
-            </div>
-
-            <div id="cabinet-key" class="cabinet-key hidden">
-              <h3 class="h3 section-title-sm">Ключ подключения</h3>
-              <div class="link-box">
-                <input id="cabinet-sub-link" type="text" readonly />
-                <button class="btn btn--ghost" id="cabinet-btn-copy" type="button">Копировать</button>
-              </div>
-              <div class="row-btns">
-                <button class="btn btn--primary" id="cabinet-btn-open-app" type="button">Открыть в Turra</button>
-                <a class="btn btn--ghost" href="#download" data-scroll-download>Скачать приложение</a>
-              </div>
-            </div>
-
-            <div class="cabinet-actions">
-              <a class="btn btn--primary" href="#buy">Купить или продлить</a>
-              <a class="btn btn--ghost" href="#download" data-scroll-download>Скачать приложение</a>
             </div>
           </div>
         </div>
@@ -236,38 +194,19 @@
               <div class="pill"><span class="pill__ico">🌍</span> Доступ по миру</div>
             </div>
           </div>
-          <div class="hero__mock">
-            <div class="mock-ring"></div>
-            <div class="app-preview app-preview--hero">
-              <div class="app-preview__bar">
-                <span class="app-preview__dot"></span>
-                <span class="app-preview__dot"></span>
-                <span class="app-preview__dot"></span>
-                <span class="app-preview__title">Turra</span>
-              </div>
-              <div class="app-preview__body">
-                <div class="connect-ring connect-ring--on">
-                  <div class="connect-ring__inner">🛡</div>
-                </div>
-                <p class="connect-status connect-status--on">Подключено</p>
-              </div>
-              <div class="app-preview__nav">
-                <span class="active">Главная</span>
-                <span>Серверы</span>
-                <span>Тарифы</span>
-                <span>Настройки</span>
-              </div>
-            </div>
+          <div class="hero__visual">
+            <img class="hero__img" src="assets/hero-app.png" alt="" width="560" height="520" loading="eager" />
           </div>
         </div>
       </section>
 
       <section class="section" id="features">
-        <div class="wrap">
-          <div class="section__head">
+        <div class="wrap features-layout">
+          <div class="features-layout__head">
             <span class="chip">Почему Turra</span>
             <h2 class="h2">Максимум возможностей<br />для твоей свободы</h2>
           </div>
+          <img class="features-layout__deco" src="assets/feature-ring.png" alt="" width="220" height="220" loading="lazy" />
           <div class="features">
             <article class="feat-card glass">
               <div class="feat-card__ico">⚡</div>
@@ -293,34 +232,41 @@
         </div>
       </section>
 
-      <section class="section section--dark" id="servers">
-        <div class="wrap servers__grid">
-          <div>
-            <span class="chip">Серверы</span>
-            <h2 class="h2">Выбор или автопилот</h2>
-            <p class="lead">Германия, Финляндия, Нидерланды, США — с пингом в реальном времени.</p>
-            <ul class="server-list">
-              <li><span class="flag">DE</span> Германия <span class="ping ping--ok">114 мс</span></li>
-              <li><span class="flag">FI</span> Финляндия <span class="ping ping--ok">98 мс</span></li>
-              <li><span class="flag">NL</span> Нидерланды <span class="ping ping--warn">169 мс</span></li>
-              <li><span class="flag">US</span> США <span class="ping ping--bad">462 мс</span></li>
-            </ul>
+      <section class="section pricing-showcase" id="pricing">
+        <div class="wrap pricing-showcase__grid">
+          <div class="pricing-showcase__head">
+            <span class="chip">Тарифы</span>
+            <h2 class="h2">Выбери свой план<br />и будь свободен</h2>
+            <p class="lead">Гибкие тарифы для любых задач — от серфинга до стриминга.</p>
           </div>
-          <div class="app-preview app-preview--servers glass">
-            <div class="app-preview__bar">
-              <span class="app-preview__title">Серверы</span>
+          <div class="pricing-showcase__body">
+            <div class="carousel carousel--showcase" id="showcase-carousel">
+              <button type="button" class="carousel__btn carousel__btn--prev" aria-label="Предыдущий тариф">‹</button>
+              <div class="carousel__viewport">
+                <div class="carousel__track" id="showcase-track"></div>
+              </div>
+              <button type="button" class="carousel__btn carousel__btn--next" aria-label="Следующий тариф">›</button>
+              <div class="carousel__dots"></div>
             </div>
-            <div class="server-preview-list">
-              <div class="server-preview-item"><span class="flag">DE</span> Германия <span class="ping ping--ok">115 мс</span></div>
-              <div class="server-preview-item server-preview-item--active"><span class="flag">US</span> США (WI-FI) <span class="ping ping--bad">462 мс</span> ★</div>
-              <div class="server-preview-item"><span class="flag">FI</span> Финляндия <span class="ping ping--ok">98 мс</span></div>
+            <a class="btn btn--primary btn--lg btn--wide pricing-showcase__cta" href="#buy">Выбрать план</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--dark" id="servers">
+        <div class="wrap">
+          <div class="servers-panel glass">
+            <div class="servers-panel__head">
+              <span class="chip">Серверы</span>
+              <h2 class="h2">Быстрые локации по всему миру</h2>
+              <p class="lead">Выбери страну вручную или доверься автопилоту.</p>
             </div>
-            <div class="app-preview__nav">
-              <span>Главная</span>
-              <span class="active">Серверы</span>
-              <span>Подписка</span>
-              <span>Настройки</span>
-            </div>
+            <ul class="server-list server-list--panel">
+              <li><span class="flag">DE</span><span class="server-name">Германия</span><span class="ping ping--ok">114 мс</span><span class="server-star" aria-hidden="true">★</span></li>
+              <li class="is-active"><span class="flag">FI</span><span class="server-name">Финляндия</span><span class="ping ping--ok">98 мс</span><span class="server-star" aria-hidden="true">★</span></li>
+              <li><span class="flag">NL</span><span class="server-name">Нидерланды</span><span class="ping ping--warn">169 мс</span><span class="server-star" aria-hidden="true">☆</span></li>
+              <li><span class="flag">US</span><span class="server-name">США</span><span class="ping ping--bad">462 мс</span><span class="server-star" aria-hidden="true">☆</span></li>
+            </ul>
           </div>
         </div>
       </section>
@@ -329,29 +275,24 @@
         <div class="wrap download">
           <div class="download__text">
             <span class="chip">Windows 10 / 11</span>
-            <h2 class="h2">Скачай Turra</h2>
+            <h2 class="h2">Скачай приложение</h2>
             <p class="lead">Один файл — запустил, вставил ключ, подключился. Работает из трея.</p>
             <a class="btn btn--primary btn--lg btn--wide" id="btn-download-main" href="#" download>
               <span class="win-icon">⊞</span> Скачать для Windows
             </a>
-            <p class="muted small download-meta">TurraVPN.exe · ~80 МБ · portable</p>
+            <p class="muted small download-meta">~80 МБ · portable</p>
           </div>
           <div class="download__visual">
-            <div class="app-preview app-preview--download glass">
-              <div class="app-preview__bar"><span class="app-preview__title">Turra</span></div>
-              <div class="app-preview__body">
-                <div class="connect-ring"><div class="connect-ring__inner">🛡</div></div>
-                <p class="connect-status">Нажми для подключения</p>
-              </div>
-            </div>
+            <img class="download__img" src="assets/download-laptop.png" alt="" width="560" height="420" loading="lazy" />
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section class="section section--steps">
         <div class="wrap">
           <div class="section__head section__head--center">
-            <h2 class="h2">Всего 4 шага к подключению</h2>
+            <span class="chip">Как это работает</span>
+            <h2 class="h2">Всего 4 шага к безопасности</h2>
           </div>
           <div class="steps-grid">
             <article class="step-card glass"><span class="step-card__n">01</span><h3>Скачай</h3><p>Приложение для Windows</p></article>
@@ -363,17 +304,21 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="wrap footer__inner">
-        <div class="logo"><img src="assets/logo.svg" alt="" width="32" height="32" /><span>Turra</span></div>
-        <p class="muted small">© Turra · Все права защищены</p>
-        <div class="footer__links">
-          <a id="footer-bot" href="#" target="_blank" rel="noopener noreferrer">Telegram</a>
-          <a id="footer-support" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
+    <footer class="footer footer--v2">
+      <div class="wrap">
+        <div class="footer__top">
+          <p class="footer__tagline">Твоя свобода в интернете</p>
+          <img class="footer__shield" src="assets/footer-shield.png" alt="" width="88" height="88" loading="lazy" />
+          <div class="footer__links">
+            <a id="footer-bot" href="#" target="_blank" rel="noopener noreferrer">Telegram-бот</a>
+            <a id="footer-support" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
+          </div>
         </div>
+        <p class="footer__copy muted small">© Turra · Все права защищены</p>
       </div>
     </footer>
 
-    <script src="app.js?v=6"></script>
+    <script src="carousel.js?v=1"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>

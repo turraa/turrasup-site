@@ -18,6 +18,7 @@
     pollTimer: null,
     telegramUser: null,
     subscription: null,
+    carousels: {},
   };
 
   const $ = (id) => document.getElementById(id);
@@ -205,89 +206,15 @@
     $('header-guest')?.classList.toggle('hidden', loggedIn);
     $('header-user')?.classList.toggle('hidden', !loggedIn);
     $('link-cabinet-mobile')?.classList.toggle('hidden', !loggedIn);
-    $('cabinet')?.classList.toggle('hidden', !loggedIn);
   }
 
-  function renderCabinet() {
-    const u = state.user;
-    if (!u) {
-      updateHeaderAuth(false);
-      return;
-    }
-
-    const name = userDisplayName(u);
-    const initial = (name[0] || '?').toUpperCase();
-
-    $('cabinet-name').textContent = name;
-    $('cabinet-avatar').textContent = initial;
-    $('header-avatar').textContent = initial;
+  function updateHeaderFromUser() {
+    const loggedIn = !!(state.user && api().storage.access);
+    updateHeaderAuth(loggedIn);
+    if (!loggedIn || !state.user) return;
+    const name = userDisplayName(state.user);
+    $('header-avatar').textContent = (name[0] || '?').toUpperCase();
     $('header-username').textContent = name.split(' ')[0] || 'Кабинет';
-
-    const emailEl = $('cabinet-email');
-    if (u.email) {
-      emailEl.textContent = u.email;
-      emailEl.classList.remove('hidden');
-    } else if (u.username) {
-      emailEl.textContent = `@${u.username}`;
-      emailEl.classList.remove('hidden');
-    } else {
-      emailEl.textContent = '';
-      emailEl.classList.add('hidden');
-    }
-
-    const balance = u.balance_kopeks ?? state.purchaseOptions?.balance_kopeks;
-    $('cabinet-balance').textContent = balance != null ? formatRub(balance) : '—';
-
-    const sub = state.subscription;
-    const active = sub?.has_subscription;
-    $('cabinet-sub-status').textContent = active ? 'Активна' : 'Нет подписки';
-    $('cabinet-sub-status').style.color = active ? '#86efac' : '';
-
-    const expires =
-      sub?.subscription?.expires_at ||
-      sub?.subscription?.expire_at ||
-      sub?.subscription?.end_date;
-    $('cabinet-sub-expires').textContent = active ? formatDateRu(expires) : '—';
-
-    const subUrl = sub?.subscription?.subscription_url;
-    const keyBlock = $('cabinet-key');
-    if (active && subUrl && sec().isSafeSubscriptionUrl(subUrl)) {
-      keyBlock.classList.remove('hidden');
-      $('cabinet-sub-link').value = subUrl;
-      $('cabinet-btn-copy').onclick = async () => {
-        await navigator.clipboard.writeText(subUrl);
-        $('cabinet-btn-copy').textContent = 'Скопировано!';
-        setTimeout(() => {
-          $('cabinet-btn-copy').textContent = 'Копировать';
-        }, 2000);
-      };
-      $('cabinet-btn-open-app').onclick = () => {
-        window.location.href = buildDeepLink(subUrl);
-      };
-    } else {
-      keyBlock.classList.add('hidden');
-    }
-
-    updateHeaderAuth(true);
-  }
-
-  async function refreshCabinetData() {
-    if (!api().storage.access) return;
-    try {
-      const me = await api().getMe();
-      state.user = me.user || me;
-    } catch {
-      /* keep existing user */
-    }
-    try {
-      state.subscription = await api().getSubscription();
-    } catch {
-      state.subscription = null;
-    }
-    if (state.purchaseOptions?.balance_kopeks != null && state.user) {
-      state.user.balance_kopeks = state.purchaseOptions.balance_kopeks;
-    }
-    renderCabinet();
   }
 
   function initMobileNav() {
@@ -553,7 +480,7 @@
     $('oauth-providers')?.classList.add('hidden');
     $('btn-logout').classList.remove('hidden');
     $('panel-subtitle').textContent = 'Выберите тариф и оплатите подписку';
-    renderCabinet();
+    updateHeaderFromUser();
   }
 
   async function afterLogin() {
@@ -574,7 +501,6 @@
       if (sub.has_subscription && sub.subscription?.subscription_url) {
         showExistingSubscription(sub.subscription.subscription_url);
       }
-      renderCabinet();
     } catch (e) {
       showAlert(e.message || 'Не удалось загрузить тарифы');
     }
@@ -602,12 +528,28 @@
     return state.purchaseOptions?.tariffs?.filter((t) => t.is_available) || [];
   }
 
-  function renderTariffCard(tariff, container, index) {
-    const card = document.createElement('article');
-    card.className = 'plan-card glass';
-    if (index === 1) card.classList.add('plan-card--featured');
-    card.dataset.id = String(tariff.id);
+  function appendCarouselSlide(container, card) {
+    const slide = document.createElement('div');
+    slide.className = 'carousel__slide';
+    slide.appendChild(card);
+    container.appendChild(slide);
+    return slide;
+  }
 
+  function refreshCarousels() {
+    if (window.TurraCarousel) {
+      if (!state.carousels.tariff) {
+        state.carousels.tariff = window.TurraCarousel.init($('tariff-carousel'));
+      }
+      if (!state.carousels.showcase) {
+        state.carousels.showcase = window.TurraCarousel.init($('showcase-carousel'));
+      }
+      state.carousels.tariff?.carouselRefresh?.();
+      state.carousels.showcase?.carouselRefresh?.();
+    }
+  }
+
+  function buildPlanCardHtml(tariff, index, { interactive }) {
     const traffic =
       tariff.is_unlimited_traffic || tariff.traffic_limit_gb >= 99999
         ? 'Безлимит трафика'
@@ -615,25 +557,49 @@
 
     const periods = tariff.periods || [];
     const mainPeriod = periods[0];
-    const priceLabel = mainPeriod
-      ? mainPeriod.price_label || formatRub(mainPeriod.price_kopeks)
-      : '—';
-    const periodSuffix = mainPeriod?.days >= 360 ? '' : '/мес';
+    const priceLabel =
+      tariff._showcasePrice ||
+      (mainPeriod ? mainPeriod.price_label || formatRub(mainPeriod.price_kopeks) : '—');
+    const periodSuffix =
+      tariff._showcasePeriod || (mainPeriod?.days >= 360 ? '' : '/мес');
+    const badge =
+      index === 1
+        ? '<span class="plan-badge">Популярный</span>'
+        : tariff._badge
+          ? `<span class="plan-badge">${escapeHtml(tariff._badge)}</span>`
+          : '';
 
-    card.innerHTML = `
-      ${index === 1 ? '<span class="plan-badge">Популярный</span>' : ''}
+    const features = tariff._showcaseFeatures || [
+      traffic,
+      `До ${tariff.device_limit || 5} устройств`,
+      'Серверы Европа и США',
+      'Поддержка 24/7',
+    ];
+
+    const actionBtn = interactive
+      ? '<button type="button" class="btn btn--primary btn--wide plan-select">Выбрать план</button>'
+      : '<a class="btn btn--primary btn--wide" href="#buy">Выбрать план</a>';
+
+    return `
+      ${badge}
       <h4 class="plan-name">${escapeHtml(tariff.name)}</h4>
       <div class="plan-price">${escapeHtml(priceLabel)}<span class="plan-period">${periodSuffix}</span></div>
       <ul class="plan-features">
-        <li>${traffic}</li>
-        <li>До ${tariff.device_limit} устройств</li>
-        <li>Серверы Европа и США</li>
-        <li>Поддержка 24/7</li>
+        ${features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}
       </ul>
-      <div class="period-list"></div>
-      <button type="button" class="btn btn--primary btn--wide plan-select">Выбрать план</button>
+      ${interactive ? '<div class="period-list"></div>' : ''}
+      ${actionBtn}
     `;
+  }
 
+  function renderTariffCard(tariff, container, index) {
+    const card = document.createElement('article');
+    card.className = 'plan-card glass';
+    if (index === 1) card.classList.add('plan-card--featured');
+    card.dataset.id = String(tariff.id);
+    card.innerHTML = buildPlanCardHtml(tariff, index, { interactive: true });
+
+    const periods = tariff.periods || [];
     const periodList = card.querySelector('.period-list');
     periods.forEach((p, i) => {
       const btn = document.createElement('button');
@@ -649,7 +615,7 @@
       periodList.appendChild(btn);
     });
 
-    card.querySelector('.plan-select').addEventListener('click', (e) => {
+    card.querySelector('.plan-select')?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (periods[0]) {
         const firstBtn = periodList.querySelector('.period-btn');
@@ -657,7 +623,62 @@
       }
     });
 
-    container.appendChild(card);
+    appendCarouselSlide(container, card);
+  }
+
+  function renderShowcaseCard(tariff, container, index) {
+    const card = document.createElement('article');
+    card.className = 'plan-card glass plan-card--showcase';
+    if (index === 1) card.classList.add('plan-card--featured');
+    card.innerHTML = buildPlanCardHtml(tariff, index, { interactive: false });
+    appendCarouselSlide(container, card);
+  }
+
+  function renderDefaultShowcase() {
+    const track = $('showcase-track');
+    if (!track) return;
+    track.innerHTML = '';
+    const defaults = [
+      {
+        name: 'Базовый',
+        _showcasePrice: '99 ₽',
+        _showcasePeriod: '/мес',
+        _showcaseFeatures: ['5 ГБ трафика', '1 устройство', 'Базовые серверы', 'Поддержка в чате'],
+        device_limit: 1,
+        traffic_limit_gb: 5,
+      },
+      {
+        name: 'Премиум',
+        _showcasePrice: '149 ₽',
+        _showcasePeriod: '/мес',
+        _showcaseFeatures: ['Безлимит трафика', '5 устройств', 'Все серверы', 'Приоритетная поддержка'],
+        device_limit: 5,
+        is_unlimited_traffic: true,
+      },
+      {
+        name: 'Семейный',
+        _showcasePrice: '299 ₽',
+        _showcasePeriod: '/мес',
+        _showcaseFeatures: ['Безлимит трафика', '10 устройств', 'Все серверы', 'Семейный доступ'],
+        device_limit: 10,
+        is_unlimited_traffic: true,
+      },
+    ];
+    defaults.forEach((t, i) => renderShowcaseCard(t, track, i));
+    refreshCarousels();
+  }
+
+  function renderShowcaseFromTariffs(tariffs) {
+    const track = $('showcase-track');
+    if (!track) return;
+    const list = (tariffs || []).filter((t) => t.is_available !== false);
+    if (!list.length) {
+      renderDefaultShowcase();
+      return;
+    }
+    track.innerHTML = '';
+    list.forEach((t, i) => renderShowcaseCard(t, track, i));
+    refreshCarousels();
   }
 
   function renderTariffs(tariffs) {
@@ -666,6 +687,8 @@
     tariffs
       .filter((t) => t.is_available !== false)
       .forEach((t, i) => renderTariffCard(t, grid, i));
+    renderShowcaseFromTariffs(tariffs);
+    refreshCarousels();
   }
 
   function renderLandingTariffs(tariffs) {
@@ -689,6 +712,13 @@
 
     renderPaymentMethods();
     setStep('payment');
+
+    const slide = cardEl.closest('.carousel__slide');
+    if (slide && state.carousels.tariff?.carouselGoTo) {
+      const slides = [...$('tariff-grid').children];
+      const idx = slides.indexOf(slide);
+      if (idx >= 0) state.carousels.tariff.carouselGoTo(idx);
+    }
   }
 
   function renderPaymentMethods() {
@@ -996,7 +1026,6 @@
       ...state.subscription.subscription,
       subscription_url: url,
     };
-    renderCabinet();
     setStep('done');
     $('sub-link').value = url;
     $('btn-copy').onclick = async () => {
@@ -1097,14 +1126,10 @@
     initEmailExtras();
     $('btn-pay').addEventListener('click', handlePay);
     $('btn-logout').addEventListener('click', logout);
-    $('cabinet-logout')?.addEventListener('click', logout);
-    $('btn-open-cabinet')?.addEventListener('click', () => {
-      const el = document.getElementById('cabinet');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      closeMobileNav();
-    });
     await initOAuthProviders();
     await initTelegramWidget();
+    renderDefaultShowcase();
+    refreshCarousels();
     await resumeSession();
   }
 
