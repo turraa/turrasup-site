@@ -70,11 +70,14 @@
     }
   }
 
+const SUBSCRIPTION_HOST_SUFFIXES = ['turrasup.net', 'turrasup.ru'];
+
   function isSafeSubscriptionUrl(url) {
     if (!url || typeof url !== 'string') return false;
     try {
       const u = new URL(url);
-      return u.protocol === 'https:' || u.protocol === 'http:';
+      if (u.protocol !== 'https:') return false;
+      return hostAllowed(u.hostname, SUBSCRIPTION_HOST_SUFFIXES);
     } catch {
       return false;
     }
