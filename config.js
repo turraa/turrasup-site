@@ -22,8 +22,8 @@ window.TURRA_CONFIG = {
   telegramUrl: 'https://t.me/TurraVpnbot',
   supportUrl: 'https://t.me/turravpn_sup',
   newsUrl: 'https://t.me/turravpnnews',
-  /** Скачивание с GitHub Releases (не кладём 82 МБ exe в репозиторий сайта) */
-  downloadUrl: 'https://github.com/turraa/turrasup-site/releases/download/v1.0.1/TurraVPN.exe',
+  /** Всегда последний Release на GitHub — при новом exe на Releases ссылка обновится сама */
+  downloadUrl: 'https://github.com/turraa/turrasup-site/releases/latest/download/TurraVPN.exe',
   downloadFileName: 'TurraVPN.exe',
 
   /** Deep link для Windows-клиента */
