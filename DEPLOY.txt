@@ -1,0 +1,2 @@
+deploy=2026-07-07T00:45:00Z
+version=scroll-download-latest-exe
