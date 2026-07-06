@@ -21,8 +21,9 @@ window.TURRA_CONFIG = {
 
   telegramUrl: 'https://t.me/TurraVpnbot',
   supportUrl: 'https://t.me/turravpn_sup',
-  /** Залей TurraVPN.exe в корень сайта на Timeweb */
-  downloadUrl: 'https://buy.turrasup.ru/TurraVPN.exe',
+  newsUrl: 'https://t.me/turravpnnews',
+  /** Скачивание с GitHub Releases (не кладём 82 МБ exe в репозиторий сайта) */
+  downloadUrl: 'https://github.com/turraa/turrasup-site/releases/download/v1.0.1/TurraVPN.exe',
   downloadFileName: 'TurraVPN.exe',
 
   /** Deep link для Windows-клиента */
