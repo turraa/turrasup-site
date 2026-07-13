@@ -12,10 +12,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=5" />
+    <link rel="stylesheet" href="/styles.css?v=13" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
-    <script src="/api.js"></script>
+    <script src="/api.js?v=7"></script>
     <script src="/auth-common.js"></script>
   </head>
   <body class="sub-page">
@@ -26,11 +26,11 @@
         <span>Turra</span>
       </a>
       <div class="sub-card glass">
-        <h1>Вход в аккаунт</h1>
+        <h1 id="title">Вход в аккаунт</h1>
         <div class="spinner" id="spinner" style="margin: 20px auto 0"></div>
         <p class="sub-status" id="status">Завершаем авторизацию…</p>
         <p id="error" class="alert hidden"></p>
-        <a id="back" class="btn btn--primary btn--wide hidden" href="/#buy">На главную</a>
+        <a id="back" class="btn btn--primary btn--wide hidden" href="/profile/#accounts">В личный кабинет</a>
       </div>
     </main>
     <script>
@@ -41,6 +41,7 @@
         const deviceId = params.get('device_id');
         const spinner = document.getElementById('spinner');
         const status = document.getElementById('status');
+        const title = document.getElementById('title');
         const errorEl = document.getElementById('error');
         const back = document.getElementById('back');
 
@@ -59,17 +60,52 @@
         if (!saved || saved.state !== state) {
           spinner.classList.add('hidden');
           status.textContent = '';
-          errorEl.textContent = 'Сессия входа истекла. Попробуйте снова с главной страницы.';
+          errorEl.textContent = 'Сессия входа истекла. Попробуйте снова.';
           errorEl.classList.remove('hidden');
           back.classList.remove('hidden');
           return;
         }
 
+        const isLink = saved.mode === 'link';
+        if (isLink) title.textContent = 'Привязка аккаунта';
+
         try {
+          if (isLink) {
+            status.textContent = 'Привязываем Яндекс…';
+            const result = await TurraApi.linkProviderCallback(
+              saved.provider,
+              code,
+              state,
+              deviceId,
+            );
+            TurraAuth.clearOAuthState();
+
+            if (result.merge_required && result.merge_token) {
+              TurraAuth.redirectToMerge(result.merge_token);
+              return;
+            }
+
+            if (!result.success) {
+              throw new Error(result.message || 'Не удалось привязать аккаунт');
+            }
+
+            location.replace('/profile/#accounts');
+            return;
+          }
+
           const auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
           TurraAuth.clearOAuthState();
+
+          if (auth.merge_required && auth.merge_token) {
+            if (auth.access_token) TurraApi.storage.access = auth.access_token;
+            if (auth.refresh_token) TurraApi.storage.refresh = auth.refresh_token;
+            TurraAuth.redirectToMerge(auth.merge_token);
+            return;
+          }
+
           TurraAuth.applyAuthResponse(auth);
-          location.replace('/#buy');
+          sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
+          location.replace('/');
         } catch (e) {
           spinner.classList.add('hidden');
           status.textContent = '';

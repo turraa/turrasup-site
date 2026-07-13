@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050508" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <title>Turra — объединение аккаунтов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css?v=13" />
+    <script src="/config.js"></script>
+    <script src="/security.js"></script>
+    <script src="/api.js?v=7"></script>
+    <script src="/auth-common.js"></script>
+  </head>
+  <body class="sub-page">
+    <div class="bg-glow" aria-hidden="true"></div>
+    <main class="sub-main sub-main--wide">
+      <a class="sub-logo" href="/">
+        <img src="/assets/logo.svg" alt="" width="40" height="40" />
+        <span>Turra</span>
+      </a>
+
+      <div id="merge-loading" class="sub-card glass">
+        <div class="spinner" style="margin: 0 auto"></div>
+        <p class="sub-status">Загрузка…</p>
+      </div>
+
+      <div id="merge-error" class="sub-card glass hidden">
+        <h1>Не удалось объединить</h1>
+        <p id="merge-error-text" class="muted"></p>
+        <a class="btn btn--primary btn--wide" href="/profile/#accounts">В личный кабинет</a>
+      </div>
+
+      <div id="merge-content" class="sub-card glass hidden">
+        <h1>Объединение аккаунтов</h1>
+        <p class="muted small merge-lead">
+          Этот Яндекс-ID уже привязан к другому аккаунту. Объедините их, чтобы сохранить подписку и
+          баланс в одном профиле.
+        </p>
+        <p id="merge-timer" class="merge-timer muted small"></p>
+        <p id="merge-pick-hint" class="alert alert--info hidden">
+          У обоих аккаунтов есть подписка — выберите, какую оставить.
+        </p>
+
+        <div id="merge-accounts" class="merge-accounts"></div>
+
+        <div class="merge-summary muted small">
+          <p>После объединения:</p>
+          <ul>
+            <li>все способы входа будут доступны в одном аккаунте;</li>
+            <li id="merge-balance-sum">балансы суммируются;</li>
+            <li id="merge-sub-warning" class="hidden">вторая подписка будет удалена.</li>
+          </ul>
+        </div>
+
+        <button class="btn btn--primary btn--wide" id="merge-confirm" type="button" disabled>
+          Объединить аккаунты
+        </button>
+        <a class="btn btn--ghost btn--wide" href="/profile/#accounts">Отмена</a>
+        <p id="merge-msg" class="alert hidden" role="status"></p>
+      </div>
+    </main>
+    <script src="/auth/merge/merge.js?v=2"></script>
+  </body>
+</html>

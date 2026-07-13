@@ -1,8 +1,8 @@
 (function () {
-  function saveOAuthState(provider, state) {
+  function saveOAuthState(provider, state, mode) {
     sessionStorage.setItem(
       'turravpn_oauth',
-      JSON.stringify({ provider, state, ts: Date.now() }),
+      JSON.stringify({ provider, state, mode: mode || 'login', ts: Date.now() }),
     );
   }
 
@@ -31,12 +31,16 @@
       api.storage.clear();
       throw new Error('Подтвердите email по ссылке из письма, затем войдите снова.');
     }
-    api.storage.access = auth.access_token;
-    api.storage.refresh = auth.refresh_token;
+    if (auth?.access_token) api.storage.access = auth.access_token;
+    if (auth?.refresh_token) api.storage.refresh = auth.refresh_token;
   }
 
   function authErrorMessage(err) {
     return err?.message || 'Не удалось выполнить вход. Попробуйте снова.';
+  }
+
+  function redirectToMerge(mergeToken) {
+    location.replace(`/auth/merge/?token=${encodeURIComponent(mergeToken)}`);
   }
 
   window.TurraAuth = {
@@ -45,5 +49,6 @@
     clearOAuthState,
     applyAuthResponse,
     authErrorMessage,
+    redirectToMerge,
   };
 })();
