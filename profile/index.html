@@ -1,155 +1,173 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#050508" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
-    <title>Turra — личный кабинет</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/styles.css?v=10" />
-    <script src="/config.js"></script>
-    <script src="/security.js"></script>
-    <script src="/api.js?v=4"></script>
-    <script src="/auth-common.js"></script>
-  </head>
-  <body>
-    <div class="bg-glow" aria-hidden="true"></div>
-
-    <header class="header">
-      <div class="wrap header__inner">
-        <a class="logo" href="/">
-          <img src="/assets/logo.svg" alt="" width="36" height="36" />
-          <span>Turra</span>
-        </a>
-        <nav class="nav" aria-label="Основное меню">
-          <a href="/">Главная</a>
-          <a href="/#servers">Серверы</a>
-          <a href="/#pricing">Тарифы</a>
-          <a id="link-support" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
-        </nav>
-        <div class="header__actions">
-          <a class="btn btn--primary btn--sm" href="/?renew=1#pricing">Тарифы</a>
-        </div>
-      </div>
-    </header>
-
-    <main class="profile-page">
-      <div class="wrap">
-        <div id="profile-loading" class="profile-loading">
-          <div class="spinner"></div>
-          <p class="muted">Загрузка профиля…</p>
-        </div>
-
-        <div id="profile-content" class="hidden">
-          <div class="cabinet-card glass">
-            <div class="cabinet-card__head">
-              <div class="cabinet-user">
-                <div class="avatar cabinet-user__avatar" id="cabinet-avatar">?</div>
-                <div>
-                  <h1 class="h3 cabinet-user__name" id="cabinet-name">—</h1>
-                  <p class="muted small" id="cabinet-email"></p>
-                </div>
-              </div>
-              <button class="btn btn--ghost btn--sm" id="cabinet-logout" type="button">Выйти</button>
-            </div>
-
-            <div class="cabinet-stats">
-              <div class="cabinet-stat">
-                <span class="muted small">Баланс</span>
-                <strong id="cabinet-balance">—</strong>
-              </div>
-              <div class="cabinet-stat">
-                <span class="muted small">Подписка</span>
-                <strong id="cabinet-sub-status">—</strong>
-              </div>
-              <div class="cabinet-stat">
-                <span class="muted small">Действует до</span>
-                <strong id="cabinet-sub-expires">—</strong>
-              </div>
-            </div>
-
-            <div id="cabinet-usage" class="cabinet-section hidden">
-              <h2 class="h3 section-title-sm">Использование</h2>
-              <div class="cabinet-stats cabinet-stats--usage">
-                <div class="cabinet-stat">
-                  <span class="muted small">Трафик</span>
-                  <strong id="cabinet-traffic">—</strong>
-                </div>
-                <div class="cabinet-stat">
-                  <span class="muted small">Устройства</span>
-                  <strong id="cabinet-devices">—</strong>
-                </div>
-              </div>
-            </div>
-
-            <div id="cabinet-addons" class="cabinet-section cabinet-section--highlight hidden">
-              <h2 class="h3 section-title-sm">Докупка трафика и устройств</h2>
-              <p class="muted small">Расширьте подписку без смены тарифа. Оплата списывается с баланса.</p>
-
-              <div id="cabinet-traffic-block" class="cabinet-addon">
-                <h3 class="cabinet-addon__title">Трафик</h3>
-                <div id="cabinet-traffic-packages" class="cabinet-packages">
-                  <p class="muted small">Загрузка…</p>
-                </div>
-              </div>
-
-              <div id="cabinet-devices-block" class="cabinet-addon">
-                <h3 class="cabinet-addon__title">Устройства</h3>
-                <div class="cabinet-device-buy">
-                  <div class="cabinet-device-buy__controls">
-                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-minus" type="button" aria-label="Меньше">−</button>
-                    <span id="cabinet-dev-count">1</span>
-                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-plus" type="button" aria-label="Больше">+</button>
-                  </div>
-                  <p class="muted small" id="cabinet-dev-price">—</p>
-                  <button class="btn btn--secondary" id="cabinet-dev-buy" type="button">Купить устройства</button>
-                </div>
-              </div>
-            </div>
-
-            <div id="cabinet-trial" class="cabinet-section hidden">
-              <h2 class="h3 section-title-sm">Пробный период</h2>
-              <p class="muted small" id="cabinet-trial-desc"></p>
-              <button class="btn btn--primary" id="cabinet-trial-btn" type="button">
-                Активировать trial
-              </button>
-            </div>
-
-            <div id="cabinet-key" class="cabinet-key hidden">
-              <h2 class="h3 section-title-sm">Ключ подключения</h2>
-              <div class="link-box">
-                <input id="cabinet-sub-link" type="text" readonly />
-                <button class="btn btn--ghost" id="cabinet-btn-copy" type="button">Копировать</button>
-              </div>
-              <button class="btn btn--primary btn--wide" id="cabinet-btn-open-app" type="button">
-                Открыть в приложении
-              </button>
-            </div>
-
-            <p id="cabinet-msg" class="alert hidden" role="status"></p>
-
-            <div class="cabinet-actions">
-              <a class="btn btn--primary" id="cabinet-buy-renew" href="/?renew=1#pricing">
-                Купить или продлить
-              </a>
-              <a class="btn btn--ghost" href="/#download">Скачать приложение</a>
-            </div>
-          </div>
-        </div>
-
-        <p id="profile-error" class="alert hidden"></p>
-      </div>
-    </main>
-
-    <script src="/profile.js?v=4"></script>
-  </body>
-</html>
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050508" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <title>Turra — личный кабинет</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css?v=11" />
+    <script src="/config.js"></script>
+    <script src="/security.js"></script>
+    <script src="/api.js?v=5"></script>
+    <script src="/auth-common.js"></script>
+  </head>
+  <body>
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <header class="header">
+      <div class="wrap header__inner">
+        <a class="logo" href="/">
+          <img src="/assets/logo.svg" alt="" width="36" height="36" />
+          <span>Turra</span>
+        </a>
+        <nav class="nav" aria-label="Основное меню">
+          <a href="/">Главная</a>
+          <a href="/#servers">Серверы</a>
+          <a href="/#pricing">Тарифы</a>
+          <a id="link-support" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
+        </nav>
+        <div class="header__actions">
+          <a class="btn btn--primary btn--sm" href="/?renew=1#pricing">Тарифы</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="profile-page">
+      <div class="wrap">
+        <div id="profile-loading" class="profile-loading">
+          <div class="spinner"></div>
+          <p class="muted">Загрузка профиля…</p>
+        </div>
+
+        <div id="profile-content" class="hidden">
+          <div class="cabinet-card glass">
+            <div class="cabinet-card__head">
+              <div class="cabinet-user">
+                <div class="avatar cabinet-user__avatar" id="cabinet-avatar">?</div>
+                <div>
+                  <h1 class="h3 cabinet-user__name" id="cabinet-name">—</h1>
+                  <p class="muted small" id="cabinet-email"></p>
+                </div>
+              </div>
+              <button class="btn btn--ghost btn--sm" id="cabinet-logout" type="button">Выйти</button>
+            </div>
+
+            <div class="cabinet-stats">
+              <div class="cabinet-stat">
+                <span class="muted small">Баланс</span>
+                <strong id="cabinet-balance">—</strong>
+              </div>
+              <div class="cabinet-stat">
+                <span class="muted small">Подписка</span>
+                <strong id="cabinet-sub-status">—</strong>
+              </div>
+              <div class="cabinet-stat">
+                <span class="muted small">Действует до</span>
+                <strong id="cabinet-sub-expires">—</strong>
+              </div>
+            </div>
+
+            <div id="cabinet-accounts" class="cabinet-section">
+              <h2 class="h3 section-title-sm">Способы входа</h2>
+              <p class="muted small">
+                Привяжите Яндекс, чтобы входить на сайт по почте — подписка и баланс останутся теми же,
+                что в Telegram-боте.
+              </p>
+              <div id="cabinet-linked-list" class="cabinet-linked-list"></div>
+              <button
+                type="button"
+                class="cabinet-yandex-link hidden"
+                id="cabinet-link-yandex"
+              >
+                <span class="cabinet-yandex-link__icon" aria-hidden="true">Я</span>
+                <span>Привязать Яндекс</span>
+              </button>
+              <p id="cabinet-accounts-msg" class="muted small hidden"></p>
+            </div>
+
+            <div id="cabinet-usage" class="cabinet-section hidden">
+              <h2 class="h3 section-title-sm">Использование</h2>
+              <div class="cabinet-stats cabinet-stats--usage">
+                <div class="cabinet-stat">
+                  <span class="muted small">Трафик</span>
+                  <strong id="cabinet-traffic">—</strong>
+                </div>
+                <div class="cabinet-stat">
+                  <span class="muted small">Устройства</span>
+                  <strong id="cabinet-devices">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div id="cabinet-addons" class="cabinet-section cabinet-section--highlight hidden">
+              <h2 class="h3 section-title-sm">Докупка трафика и устройств</h2>
+              <p class="muted small">Расширьте подписку без смены тарифа. Оплата списывается с баланса.</p>
+
+              <div id="cabinet-traffic-block" class="cabinet-addon">
+                <h3 class="cabinet-addon__title">Трафик</h3>
+                <div id="cabinet-traffic-packages" class="cabinet-packages">
+                  <p class="muted small">Загрузка…</p>
+                </div>
+              </div>
+
+              <div id="cabinet-devices-block" class="cabinet-addon">
+                <h3 class="cabinet-addon__title">Устройства</h3>
+                <div class="cabinet-device-buy">
+                  <div class="cabinet-device-buy__controls">
+                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-minus" type="button" aria-label="Меньше">−</button>
+                    <span id="cabinet-dev-count">1</span>
+                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-plus" type="button" aria-label="Больше">+</button>
+                  </div>
+                  <p class="muted small" id="cabinet-dev-price">—</p>
+                  <button class="btn btn--secondary" id="cabinet-dev-buy" type="button">Купить устройства</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="cabinet-trial" class="cabinet-section hidden">
+              <h2 class="h3 section-title-sm">Пробный период</h2>
+              <p class="muted small" id="cabinet-trial-desc"></p>
+              <button class="btn btn--primary" id="cabinet-trial-btn" type="button">
+                Активировать trial
+              </button>
+            </div>
+
+            <div id="cabinet-key" class="cabinet-key hidden">
+              <h2 class="h3 section-title-sm">Ключ подключения</h2>
+              <div class="link-box">
+                <input id="cabinet-sub-link" type="text" readonly />
+                <button class="btn btn--ghost" id="cabinet-btn-copy" type="button">Копировать</button>
+              </div>
+              <button class="btn btn--primary btn--wide" id="cabinet-btn-open-app" type="button">
+                Открыть в приложении
+              </button>
+            </div>
+
+            <p id="cabinet-msg" class="alert hidden" role="status"></p>
+
+            <div class="cabinet-actions">
+              <a class="btn btn--primary" id="cabinet-buy-renew" href="/?renew=1#pricing">
+                Купить или продлить
+              </a>
+              <a class="btn btn--ghost" href="/#download">Скачать приложение</a>
+            </div>
+          </div>
+        </div>
+
+        <p id="profile-error" class="alert hidden"></p>
+      </div>
+    </main>
+
+    <script src="/profile.js?v=5"></script>
+  </body>
+</html>

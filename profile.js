@@ -383,7 +383,79 @@
     trialInfo = trial;
     const user = me.user || me;
     renderProfile(user, subscription, opts?.balance_kopeks);
-    await loadAddons();
+    await Promise.all([loadAddons(), loadLinkedAccounts()]);
+  }
+
+  function providerLabel(name) {
+    const map = {
+      telegram: 'Telegram',
+      yandex: 'Яндекс',
+      email: 'Email',
+      google: 'Google',
+      discord: 'Discord',
+      vk: 'VK',
+    };
+    return map[name] || name;
+  }
+
+  async function loadLinkedAccounts() {
+    const root = $('cabinet-linked-list');
+    const linkBtn = $('cabinet-link-yandex');
+    const hint = $('cabinet-accounts-msg');
+    if (!root) return;
+
+    hint?.classList.add('hidden');
+
+    try {
+      const data = await api().getLinkedProviders();
+      const providers = data.providers || [];
+      root.innerHTML = '';
+
+      if (!providers.length) {
+        root.innerHTML = '<p class="muted small">Способы входа недоступны.</p>';
+        linkBtn?.classList.remove('hidden');
+        return;
+      }
+
+      providers.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'cabinet-linked-row';
+        const idText = item.identifier ? ` · ${item.identifier}` : '';
+        row.innerHTML = item.linked
+          ? `<strong>${providerLabel(item.provider)}</strong><span class="cabinet-linked-row__ok">Привязан${idText}</span>`
+          : `<strong>${providerLabel(item.provider)}</strong><span class="cabinet-linked-row__off">Не привязан</span>`;
+        root.appendChild(row);
+      });
+
+      const yandex = providers.find((p) => p.provider === 'yandex');
+      if (yandex?.linked) {
+        linkBtn?.classList.add('hidden');
+        if (hint) {
+          hint.textContent =
+            'Яндекс привязан — входите на сайт кнопкой «Войти через Яндекс» на главной странице.';
+          hint.classList.remove('hidden');
+        }
+      } else {
+        linkBtn?.classList.remove('hidden');
+      }
+    } catch (e) {
+      root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить способы входа'}</p>`;
+      linkBtn?.classList.remove('hidden');
+    }
+  }
+
+  async function startLinkYandex() {
+    const btn = $('cabinet-link-yandex');
+    if (btn) btn.disabled = true;
+    showMsg('', true);
+    try {
+      const { authorize_url, state } = await api().linkProviderInit('yandex');
+      window.TurraAuth.saveOAuthState('yandex', state, 'link');
+      location.href = authorize_url;
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      showMsg(e?.message || 'Не удалось начать привязку Яндекса', false);
+    }
   }
 
   function logout() {
@@ -416,6 +488,13 @@
       localStorage.removeItem('turravpn_access');
     }
 
+    const mergeReturn = sessionStorage.getItem('turravpn_merge_return');
+    if (mergeReturn) {
+      sessionStorage.removeItem('turravpn_merge_return');
+      location.replace(`/auth/merge/?token=${encodeURIComponent(mergeReturn)}`);
+      return;
+    }
+
     const restored = await api().restoreSession();
     if (!restored && !api().storage.access) {
       location.replace('/#pricing');
@@ -426,6 +505,10 @@
 
     $('cabinet-buy-renew')?.addEventListener('click', () => {
       sessionStorage.setItem('turravpn_checkout_renew', '1');
+    });
+
+    $('cabinet-link-yandex')?.addEventListener('click', () => {
+      void startLinkYandex();
     });
 
     $('cabinet-dev-minus')?.addEventListener('click', () => {
@@ -456,6 +539,9 @@
       await reloadProfile();
       if (location.hash === '#addons') {
         $('cabinet-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (location.hash === '#accounts') {
+        $('cabinet-accounts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } catch (e) {
       if (e?.status === 401) {

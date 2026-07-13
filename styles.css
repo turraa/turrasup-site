@@ -1757,6 +1757,151 @@ body.sub-page {
   background: rgba(239, 68, 68, 0.12);
 }
 
+.cabinet-linked-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 16px;
+}
+
+.cabinet-linked-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cabinet-linked-row strong {
+  font-size: 0.95rem;
+}
+
+.cabinet-linked-row__ok {
+  color: #86efac;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.cabinet-linked-row__off {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.cabinet-yandex-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1.25rem;
+  margin-top: 4px;
+  border: none;
+  border-radius: 0.75rem;
+  background: #fc3f1d;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(252, 63, 29, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.cabinet-yandex-link:hover {
+  background: #e8381a;
+  box-shadow: 0 6px 20px rgba(252, 63, 29, 0.45);
+  transform: translateY(-1px);
+}
+
+.cabinet-yandex-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cabinet-yandex-link__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #fff;
+  color: #fc3f1d;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sub-main--wide {
+  max-width: 560px;
+}
+
+.merge-lead {
+  margin: 0 0 12px;
+}
+
+.merge-timer {
+  margin: 0 0 16px;
+}
+
+.merge-accounts {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.merge-account-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.merge-account-card:hover,
+.merge-account-card.is-selected {
+  border-color: rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.merge-account-card__label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.merge-account-card__title {
+  font-size: 1rem;
+}
+
+.merge-summary {
+  margin: 0 0 16px;
+}
+
+.merge-summary ul {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+}
+
+.alert--info {
+  color: #bfdbfe;
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .profile-page {
   position: relative;
   z-index: 1;

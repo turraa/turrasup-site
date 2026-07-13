@@ -211,6 +211,43 @@
       });
     },
 
+    getLinkedProviders() {
+      return request('/cabinet/auth/account/linked-providers');
+    },
+
+    linkProviderInit(provider) {
+      return request(`/cabinet/auth/account/link/${encodeURIComponent(provider)}/init`);
+    },
+
+    linkProviderCallback(provider, code, state, deviceId) {
+      return request(`/cabinet/auth/account/link/${encodeURIComponent(provider)}/callback`, {
+        method: 'POST',
+        body: JSON.stringify({
+          code,
+          state,
+          device_id: deviceId || undefined,
+        }),
+      });
+    },
+
+    unlinkProvider(provider) {
+      return request(`/cabinet/auth/account/unlink/${encodeURIComponent(provider)}`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+    },
+
+    getMergePreview(mergeToken) {
+      return request(`/cabinet/auth/merge/${encodeURIComponent(mergeToken)}`);
+    },
+
+    executeMerge(mergeToken, keepSubscriptionFrom) {
+      return request(`/cabinet/auth/merge/${encodeURIComponent(mergeToken)}`, {
+        method: 'POST',
+        body: JSON.stringify({ keep_subscription_from: keepSubscriptionFrom }),
+      });
+    },
+
     getMe() {
       return request('/cabinet/auth/me');
     },
