@@ -245,11 +245,17 @@
   async function loadAddons() {
     if (!subscriptionData?.has_subscription) return;
 
+    const root = $('cabinet-traffic-packages');
+    if (root) root.innerHTML = '<p class="muted small">Загрузка пакетов…</p>';
+
     try {
       const packages = await api().getTrafficPackages();
       renderTrafficPackages(packages);
-    } catch {
+    } catch (e) {
       renderTrafficPackages([]);
+      if (root) {
+        root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить пакеты трафика'}</p>`;
+      }
     }
 
     deviceCount = 1;
@@ -306,6 +312,10 @@
     }
 
     $('cabinet-logout').addEventListener('click', logout);
+
+    $('cabinet-buy-renew')?.addEventListener('click', () => {
+      sessionStorage.setItem('turravpn_checkout_renew', '1');
+    });
 
     $('cabinet-dev-minus')?.addEventListener('click', () => {
       deviceCount = Math.max(1, deviceCount - 1);

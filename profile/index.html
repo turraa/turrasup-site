@@ -12,10 +12,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=8" />
+    <link rel="stylesheet" href="/styles.css?v=9" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
-    <script src="/api.js?v=2"></script>
+    <script src="/api.js?v=3"></script>
     <script src="/auth-common.js"></script>
   </head>
   <body>
@@ -30,11 +30,11 @@
         <nav class="nav" aria-label="Основное меню">
           <a href="/">Главная</a>
           <a href="/#servers">Серверы</a>
-          <a href="/#buy">Тарифы</a>
+          <a href="/#pricing">Тарифы</a>
           <a id="link-support" href="#" target="_blank" rel="noopener noreferrer">Поддержка</a>
         </nav>
         <div class="header__actions">
-          <a class="btn btn--primary btn--sm" href="/#buy">Тарифы</a>
+          <a class="btn btn--primary btn--sm" href="/?renew=1#pricing">Тарифы</a>
         </div>
       </div>
     </header>
@@ -108,8 +108,8 @@
             </div>
 
             <div id="cabinet-addons" class="cabinet-section hidden">
-              <h2 class="h3 section-title-sm">Докупка</h2>
-              <p class="muted small">Расширьте подписку без смены тарифа.</p>
+              <h2 class="h3 section-title-sm">Докупка трафика и устройств</h2>
+              <p class="muted small">Расширьте подписку без смены тарифа. Списание с баланса.</p>
 
               <div class="cabinet-addon">
                 <h3 class="cabinet-addon__title">Трафик</h3>
@@ -133,7 +133,9 @@
             <p id="cabinet-msg" class="alert hidden" role="status"></p>
 
             <div class="cabinet-actions">
-              <a class="btn btn--primary" href="/#buy">Купить или продлить</a>
+              <a class="btn btn--primary" id="cabinet-buy-renew" href="/?renew=1#pricing">
+                Купить или продлить
+              </a>
               <a class="btn btn--ghost" href="/#download">Скачать приложение</a>
             </div>
           </div>
@@ -143,6 +145,6 @@
       </div>
     </main>
 
-    <script src="/profile.js?v=2"></script>
+    <script src="/profile.js?v=3"></script>
   </body>
 </html>
