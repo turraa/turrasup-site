@@ -7,6 +7,7 @@
   let deviceCount = 1;
   let subscriptionData = null;
   let trialInfo = null;
+  let purchaseOptions = null;
 
   function formatRub(kopeks) {
     return `${(kopeks / 100).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₽`;
@@ -40,6 +41,68 @@
     return `${cfg().deepLinkScheme}://import?sub=${encodeURIComponent(subUrl)}`;
   }
 
+  function subscriptionDetails(subscription) {
+    return subscription?.subscription || null;
+  }
+
+  function isSubscriptionActive(subscription) {
+    if (!subscription) return false;
+    if (subscription.has_subscription === true) return true;
+
+    const sub = subscriptionDetails(subscription);
+    if (!sub) return false;
+
+    if (sub.is_active === true || sub.is_limited === true) return true;
+    if (sub.subscription_url) return true;
+    if (sub.status === 'active' || sub.status === 'limited' || sub.status === 'ACTIVE') return true;
+
+    const expires =
+      sub.end_date || sub.expires_at || sub.expire_at;
+    if (expires) {
+      const end = new Date(expires);
+      if (!Number.isNaN(end.getTime()) && end.getTime() > Date.now()) return true;
+    }
+
+    return false;
+  }
+
+  function canBuyAddons(subscription) {
+    const sub = subscriptionDetails(subscription);
+    if (!isSubscriptionActive(subscription) || !sub) return false;
+    if (sub.is_trial) return false;
+    return sub.is_active !== false || sub.is_limited === true || subscription.has_subscription === true;
+  }
+
+  function normalizePackages(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.packages)) return data.packages;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
+  }
+
+  function buildPackagesFromTariff(subscription) {
+    if (!purchaseOptions || purchaseOptions.sales_mode !== 'tariffs') return [];
+
+    const sub = subscriptionDetails(subscription);
+    const tariffId = sub?.tariff_id ?? purchaseOptions.current_tariff_id;
+    const tariff =
+      purchaseOptions.tariffs?.find((t) => t.id === tariffId) ||
+      purchaseOptions.tariffs?.find((t) => t.is_current) ||
+      purchaseOptions.tariffs?.[0];
+
+    if (!tariff?.traffic_topup_enabled || !tariff.traffic_topup_packages?.length) return [];
+
+    const pricePerGb = tariff.traffic_price_per_gb_kopeks || 0;
+    if (pricePerGb <= 0) return [];
+
+    return tariff.traffic_topup_packages.map((gb) => ({
+      gb,
+      is_unlimited: false,
+      price_kopeks: gb * pricePerGb,
+      price_rubles: (gb * pricePerGb) / 100,
+    }));
+  }
+
   function showError(msg) {
     $('profile-loading').classList.add('hidden');
     $('profile-content').classList.add('hidden');
@@ -61,9 +124,16 @@
     el.classList.add(ok ? 'alert--ok' : 'alert--err');
   }
 
+  function setBlockVisible(id, visible) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+  }
+
   async function refreshDevicePrice() {
     const priceEl = $('cabinet-dev-price');
     const buyBtn = $('cabinet-dev-buy');
+    const devicesBlock = $('cabinet-devices-block');
     if (!priceEl || !buyBtn) return;
 
     $('cabinet-dev-count').textContent = String(deviceCount);
@@ -72,24 +142,45 @@
 
     try {
       const info = await api().getDevicePrice(deviceCount);
-      if (!info.available) {
-        priceEl.textContent = info.reason || 'Докупка недоступна';
+      if (info.available === false) {
+        priceEl.textContent = info.reason || 'Докупка устройств недоступна для вашего тарифа';
+        devicesBlock?.classList.remove('hidden');
         return;
       }
       priceEl.textContent = info.total_price_label || formatRub(info.total_price_kopeks || 0);
       buyBtn.disabled = false;
+      devicesBlock?.classList.remove('hidden');
     } catch (e) {
       priceEl.textContent = e?.message || 'Не удалось рассчитать цену';
+      devicesBlock?.classList.remove('hidden');
     }
   }
 
-  function renderTrafficPackages(packages) {
+  function renderTrafficPackages(packages, subscription) {
     const root = $('cabinet-traffic-packages');
+    const trafficBlock = $('cabinet-traffic-block');
     if (!root) return;
+
     root.innerHTML = '';
+    const sub = subscriptionDetails(subscription);
+    const unlimitedTraffic =
+      sub?.traffic_limit_gb === 0 ||
+      sub?.traffic_limit_gb >= 99999 ||
+      purchaseOptions?.tariffs?.some(
+        (t) => t.id === sub?.tariff_id && t.is_unlimited_traffic,
+      );
+
+    if (unlimitedTraffic) {
+      root.innerHTML =
+        '<p class="muted small">У вас безлимитный тариф — докупка трафика не требуется.</p>';
+      trafficBlock?.classList.remove('hidden');
+      return;
+    }
 
     if (!packages?.length) {
-      root.innerHTML = '<p class="muted small">Пакеты трафика недоступны.</p>';
+      root.innerHTML =
+        '<p class="muted small">Пакеты трафика пока недоступны. Если нужна докупка — напишите в поддержку или включите «Докупка трафика» в тарифе Bedolaga.</p>';
+      trafficBlock?.classList.remove('hidden');
       return;
     }
 
@@ -101,7 +192,7 @@
       const price = pkg.price_rubles != null ? `${pkg.price_rubles} ₽` : formatRub(pkg.price_kopeks);
       btn.innerHTML = `<strong>${label}</strong><span>${price}</span>`;
       btn.addEventListener('click', async () => {
-        if (!confirm(`Купить ${label} за ${price}?`)) return;
+        if (!confirm(`Купить ${label} за ${price}? Списание с баланса.`)) return;
         showMsg('', true);
         btn.disabled = true;
         try {
@@ -115,6 +206,8 @@
       });
       root.appendChild(btn);
     });
+
+    trafficBlock?.classList.remove('hidden');
   }
 
   function renderTrialSection() {
@@ -123,7 +216,7 @@
     const btn = $('cabinet-trial-btn');
     if (!block || !trialInfo) return;
 
-    if (!trialInfo.is_available || subscriptionData?.has_subscription) {
+    if (!trialInfo.is_available || isSubscriptionActive(subscriptionData)) {
       block.classList.add('hidden');
       return;
     }
@@ -152,8 +245,8 @@
 
   function renderUsage(subscription) {
     const usage = $('cabinet-usage');
-    const sub = subscription?.subscription;
-    if (!usage || !subscription?.has_subscription || !sub) {
+    const sub = subscriptionDetails(subscription);
+    if (!usage || !isSubscriptionActive(subscription) || !sub) {
       usage?.classList.add('hidden');
       return;
     }
@@ -171,14 +264,16 @@
     usage.classList.remove('hidden');
   }
 
-  function renderAddons(hasSubscription) {
+  function renderAddons(subscription) {
     const block = $('cabinet-addons');
     if (!block) return;
-    if (hasSubscription) {
-      block.classList.remove('hidden');
-    } else {
+
+    if (!canBuyAddons(subscription)) {
       block.classList.add('hidden');
+      return;
     }
+
+    block.classList.remove('hidden');
   }
 
   function renderProfile(user, subscription, balanceKopeks) {
@@ -201,21 +296,20 @@
     const balance = user.balance_kopeks ?? balanceKopeks;
     $('cabinet-balance').textContent = balance != null ? formatRub(balance) : '—';
 
-    const active = subscription?.has_subscription;
+    const active = isSubscriptionActive(subscription);
+    const sub = subscriptionDetails(subscription);
+
     $('cabinet-sub-status').textContent = active
-      ? subscription?.subscription?.is_trial
+      ? sub?.is_trial
         ? 'Trial'
         : 'Активна'
       : 'Нет подписки';
     $('cabinet-sub-status').style.color = active ? '#86efac' : '';
 
-    const expires =
-      subscription?.subscription?.expires_at ||
-      subscription?.subscription?.expire_at ||
-      subscription?.subscription?.end_date;
+    const expires = sub?.end_date || sub?.expires_at || sub?.expire_at;
     $('cabinet-sub-expires').textContent = active ? formatDateRu(expires) : '—';
 
-    const subUrl = subscription?.subscription?.subscription_url;
+    const subUrl = sub?.subscription_url;
     const keyBlock = $('cabinet-key');
     if (active && subUrl && sec().isSafeSubscriptionUrl(subUrl)) {
       keyBlock.classList.remove('hidden');
@@ -236,26 +330,42 @@
 
     renderUsage(subscription);
     renderTrialSection();
-    renderAddons(!!active);
+    renderAddons(subscription);
 
     $('profile-loading').classList.add('hidden');
     $('profile-content').classList.remove('hidden');
   }
 
   async function loadAddons() {
-    if (!subscriptionData?.has_subscription) return;
+    if (!canBuyAddons(subscriptionData)) return;
+
+    renderAddons(subscriptionData);
+    setBlockVisible('cabinet-addons', true);
 
     const root = $('cabinet-traffic-packages');
     if (root) root.innerHTML = '<p class="muted small">Загрузка пакетов…</p>';
 
+    let packages = [];
+    let packagesError = null;
+
     try {
-      const packages = await api().getTrafficPackages();
-      renderTrafficPackages(packages);
+      packages = normalizePackages(await api().getTrafficPackages());
     } catch (e) {
-      renderTrafficPackages([]);
+      packagesError = e;
+      packages = [];
+    }
+
+    if (!packages.length) {
+      packages = buildPackagesFromTariff(subscriptionData);
+    }
+
+    if (!packages.length && packagesError) {
       if (root) {
-        root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить пакеты трафика'}</p>`;
+        root.innerHTML = `<p class="muted small">${packagesError.message || 'Не удалось загрузить пакеты трафика'}</p>`;
       }
+      setBlockVisible('cabinet-traffic-block', true);
+    } else {
+      renderTrafficPackages(packages, subscriptionData);
     }
 
     deviceCount = 1;
@@ -269,6 +379,7 @@
       api().getPurchaseOptions().catch(() => null),
       api().getTrialInfo().catch(() => null),
     ]);
+    purchaseOptions = opts;
     trialInfo = trial;
     const user = me.user || me;
     renderProfile(user, subscription, opts?.balance_kopeks);
@@ -277,7 +388,7 @@
 
   function logout() {
     api().storage.clear();
-    location.href = '/#buy';
+    location.href = '/#pricing';
   }
 
   async function initLinks() {
@@ -307,7 +418,7 @@
 
     const restored = await api().restoreSession();
     if (!restored && !api().storage.access) {
-      location.replace('/#buy');
+      location.replace('/#pricing');
       return;
     }
 
@@ -343,6 +454,9 @@
 
     try {
       await reloadProfile();
+      if (location.hash === '#addons') {
+        $('cabinet-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } catch (e) {
       if (e?.status === 401) {
         const again = await api().restoreSession();
@@ -355,7 +469,7 @@
           }
         }
         api().storage.clear();
-        location.replace('/#buy');
+        location.replace('/#pricing');
         return;
       }
       showError(e?.message || 'Не удалось загрузить профиль. Попробуйте обновить страницу.');
