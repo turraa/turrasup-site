@@ -1652,6 +1652,96 @@ body.sub-page {
   gap: 10px;
 }
 
+.cabinet-section {
+  margin-bottom: 24px;
+  padding-top: 8px;
+}
+
+.cabinet-section + .cabinet-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+}
+
+.cabinet-stats--usage {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 0;
+}
+
+.cabinet-addon {
+  margin-top: 16px;
+}
+
+.cabinet-addon__title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.cabinet-packages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.cabinet-package-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.cabinet-package-btn:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.cabinet-package-btn strong {
+  font-size: 0.95rem;
+}
+
+.cabinet-package-btn span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.cabinet-device-buy {
+  display: grid;
+  gap: 10px;
+  max-width: 280px;
+}
+
+.cabinet-device-buy__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cabinet-device-buy__controls span {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+#cabinet-msg.alert--ok {
+  color: #bbf7d0;
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+#cabinet-msg.alert--err {
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .profile-page {
   position: relative;
   z-index: 1;

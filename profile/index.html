@@ -85,6 +85,53 @@
               </button>
             </div>
 
+            <div id="cabinet-trial" class="cabinet-section hidden">
+              <h2 class="h3 section-title-sm">Пробный период</h2>
+              <p class="muted small" id="cabinet-trial-desc"></p>
+              <button class="btn btn--primary" id="cabinet-trial-btn" type="button">
+                Активировать trial
+              </button>
+            </div>
+
+            <div id="cabinet-usage" class="cabinet-section hidden">
+              <h2 class="h3 section-title-sm">Использование</h2>
+              <div class="cabinet-stats cabinet-stats--usage">
+                <div class="cabinet-stat">
+                  <span class="muted small">Трафик</span>
+                  <strong id="cabinet-traffic">—</strong>
+                </div>
+                <div class="cabinet-stat">
+                  <span class="muted small">Устройства</span>
+                  <strong id="cabinet-devices">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div id="cabinet-addons" class="cabinet-section hidden">
+              <h2 class="h3 section-title-sm">Докупка</h2>
+              <p class="muted small">Расширьте подписку без смены тарифа.</p>
+
+              <div class="cabinet-addon">
+                <h3 class="cabinet-addon__title">Трафик</h3>
+                <div id="cabinet-traffic-packages" class="cabinet-packages"></div>
+              </div>
+
+              <div class="cabinet-addon">
+                <h3 class="cabinet-addon__title">Устройства</h3>
+                <div class="cabinet-device-buy">
+                  <div class="cabinet-device-buy__controls">
+                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-minus" type="button" aria-label="Меньше">−</button>
+                    <span id="cabinet-dev-count">1</span>
+                    <button class="btn btn--ghost btn--sm" id="cabinet-dev-plus" type="button" aria-label="Больше">+</button>
+                  </div>
+                  <p class="muted small" id="cabinet-dev-price">—</p>
+                  <button class="btn btn--secondary" id="cabinet-dev-buy" type="button">Купить устройства</button>
+                </div>
+              </div>
+            </div>
+
+            <p id="cabinet-msg" class="alert hidden" role="status"></p>
+
             <div class="cabinet-actions">
               <a class="btn btn--primary" href="/#buy">Купить или продлить</a>
               <a class="btn btn--ghost" href="/#download">Скачать приложение</a>

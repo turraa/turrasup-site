@@ -259,6 +259,38 @@
       return request('/cabinet/subscription');
     },
 
+    getTrialInfo() {
+      return request('/cabinet/subscription/trial');
+    },
+
+    activateTrial() {
+      return request('/cabinet/subscription/trial', { method: 'POST', body: JSON.stringify({}) });
+    },
+
+    getTrafficPackages() {
+      return request('/cabinet/subscription/traffic-packages');
+    },
+
+    purchaseTraffic(gb) {
+      return request('/cabinet/subscription/traffic', {
+        method: 'POST',
+        body: JSON.stringify({ gb }),
+      });
+    },
+
+    getDevicePrice(devices = 1) {
+      return request(
+        `/cabinet/subscription/devices/price?devices=${encodeURIComponent(String(devices))}`,
+      );
+    },
+
+    purchaseDevices(devices) {
+      return request('/cabinet/subscription/devices/purchase', {
+        method: 'POST',
+        body: JSON.stringify({ devices }),
+      });
+    },
+
     // --- Landing mode ---
     getLandingConfig(slug) {
       return request(`/cabinet/landing/${slug}`);
