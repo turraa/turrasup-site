@@ -142,7 +142,8 @@
     const restored = await api().restoreSession();
     if (!restored && !api().storage.access) {
       sessionStorage.setItem('turravpn_merge_return', token);
-      location.replace('/#pricing');
+      sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
+      location.replace('/');
       return;
     }
 

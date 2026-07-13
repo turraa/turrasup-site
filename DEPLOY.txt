@@ -1,2 +1,49 @@
-deploy=2026-07-07T00:45:00Z
-version=scroll-download-latest-exe
+DEPLOY FROM THIS FOLDER ONLY: dist-web/
+DO NOT upload website/ — that is the old static site.
+
+build=2026-07-13T23:21:11.038Z
+main=assets/index-YwSwCzIV.js
+files=35
+
+Upload ALL files and folders below (overwrite on server):
+  .htaccess
+  BUILD.json
+  DEPLOY.txt
+  api.js
+  assets/canvas-IeHxA95V.js
+  assets/canvas-ulxuyGo_.css
+  assets/cat-logo.png
+  assets/checkout-DKoB6kis.js
+  assets/checkout-u6BqVQPm.css
+  assets/download-laptop.png
+  assets/favicon-32.png
+  assets/favicon.svg
+  assets/feature-ring.png
+  assets/footer-shield.png
+  assets/hero-app.png
+  assets/index-CS_FcnUI.css
+  assets/index-YwSwCzIV.js
+  assets/logo.svg
+  assets/motion-DjtP4-eQ.js
+  assets/react-vendor-C2StAl4u.js
+  assets/screenshots/app-home.png
+  assets/screenshots/app-servers.png
+  auth-common.js
+  auth/merge/index.html
+  auth/merge/merge.js
+  auth/oauth/callback/index.html
+  config.js
+  favicon.svg
+  index.html
+  profile.js
+  profile/index.html
+  reset-password/index.html
+  security.js
+  styles.css
+  verify-email/index.html
+
+After upload open: https://buy.turrasup.ru/BUILD.json
+If BUILD.json on server shows the same build= timestamp — deploy succeeded.
+
+Main page uses hashed assets from index.html — always upload index.html + assets/* together.
+Profile uses ?v= query strings — bump them in public/ and rebuild if LK looks stale.

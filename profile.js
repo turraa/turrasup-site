@@ -499,7 +499,7 @@
 
     if (typeof api().linkProviderInit !== 'function') {
       if (btn) btn.disabled = false;
-      showMsg('Обновите страницу (Ctrl+F5). Если не помогло — залейте api.js?v=6 на сервер.', false);
+      showMsg('Обновите страницу (Ctrl+F5). Если не помогло — залейте api.js?v=7 на сервер.', false);
       return;
     }
 
@@ -515,7 +515,7 @@
 
   function logout() {
     api().storage.clear();
-    location.href = '/#pricing';
+    location.href = '/';
   }
 
   async function initLinks() {

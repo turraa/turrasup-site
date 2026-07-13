@@ -12,10 +12,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=11" />
+    <link rel="stylesheet" href="/styles.css?v=13" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
-    <script src="/api.js?v=5"></script>
+    <script src="/api.js?v=7"></script>
     <script src="/auth-common.js"></script>
   </head>
   <body class="sub-page">
@@ -104,7 +104,8 @@
           }
 
           TurraAuth.applyAuthResponse(auth);
-          location.replace('/#pricing');
+          sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
+          location.replace('/');
         } catch (e) {
           spinner.classList.add('hidden');
           status.textContent = '';
