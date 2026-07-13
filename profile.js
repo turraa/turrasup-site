@@ -331,6 +331,8 @@
     renderUsage(subscription);
     renderTrialSection();
     renderAddons(subscription);
+    ensureAccountsSection();
+    bindLinkYandexButton();
 
     $('profile-loading').classList.add('hidden');
     $('profile-content').classList.remove('hidden');
@@ -386,6 +388,42 @@
     await Promise.all([loadAddons(), loadLinkedAccounts()]);
   }
 
+  function ensureAccountsSection() {
+    if ($('cabinet-accounts')) return;
+
+    const stats = document.querySelector('.cabinet-stats');
+    if (!stats) return;
+
+    const section = document.createElement('div');
+    section.id = 'cabinet-accounts';
+    section.className = 'cabinet-section cabinet-section--highlight';
+    section.innerHTML = `
+      <h2 class="h3 section-title-sm">Способы входа</h2>
+      <p class="muted small">
+        Привяжите Яндекс, чтобы входить на сайт по почте — подписка и баланс останутся теми же,
+        что в Telegram-боте.
+      </p>
+      <div id="cabinet-linked-list" class="cabinet-linked-list">
+        <p class="muted small">Загрузка…</p>
+      </div>
+      <button type="button" class="cabinet-yandex-link" id="cabinet-link-yandex">
+        <span class="cabinet-yandex-link__icon" aria-hidden="true">Я</span>
+        <span>Привязать Яндекс</span>
+      </button>
+      <p id="cabinet-accounts-msg" class="muted small hidden"></p>
+    `;
+    stats.insertAdjacentElement('afterend', section);
+  }
+
+  function bindLinkYandexButton() {
+    const btn = $('cabinet-link-yandex');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      void startLinkYandex();
+    });
+  }
+
   function providerLabel(name) {
     const map = {
       telegram: 'Telegram',
@@ -399,12 +437,22 @@
   }
 
   async function loadLinkedAccounts() {
+    ensureAccountsSection();
+    bindLinkYandexButton();
+
     const root = $('cabinet-linked-list');
     const linkBtn = $('cabinet-link-yandex');
     const hint = $('cabinet-accounts-msg');
-    if (!root) return;
+    if (!root || !linkBtn) return;
 
     hint?.classList.add('hidden');
+    linkBtn.classList.remove('hidden');
+
+    if (typeof api().getLinkedProviders !== 'function') {
+      root.innerHTML =
+        '<p class="muted small">На сервере старая версия api.js. Обновите страницу (Ctrl+F5) или залейте новые файлы с dist-web.</p>';
+      return;
+    }
 
     try {
       const data = await api().getLinkedProviders();
@@ -448,6 +496,13 @@
     const btn = $('cabinet-link-yandex');
     if (btn) btn.disabled = true;
     showMsg('', true);
+
+    if (typeof api().linkProviderInit !== 'function') {
+      if (btn) btn.disabled = false;
+      showMsg('Обновите страницу (Ctrl+F5). Если не помогло — залейте api.js?v=6 на сервер.', false);
+      return;
+    }
+
     try {
       const { authorize_url, state } = await api().linkProviderInit('yandex');
       window.TurraAuth.saveOAuthState('yandex', state, 'link');
@@ -507,9 +562,8 @@
       sessionStorage.setItem('turravpn_checkout_renew', '1');
     });
 
-    $('cabinet-link-yandex')?.addEventListener('click', () => {
-      void startLinkYandex();
-    });
+    ensureAccountsSection();
+    bindLinkYandexButton();
 
     $('cabinet-dev-minus')?.addEventListener('click', () => {
       deviceCount = Math.max(1, deviceCount - 1);

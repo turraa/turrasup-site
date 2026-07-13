@@ -15,10 +15,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=11" />
+    <link rel="stylesheet" href="/styles.css?v=12" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
-    <script src="/api.js?v=5"></script>
+    <script src="/api.js?v=6"></script>
     <script src="/auth-common.js"></script>
   </head>
   <body>
@@ -77,18 +77,16 @@
               </div>
             </div>
 
-            <div id="cabinet-accounts" class="cabinet-section">
+            <div id="cabinet-accounts" class="cabinet-section cabinet-section--highlight">
               <h2 class="h3 section-title-sm">Способы входа</h2>
               <p class="muted small">
                 Привяжите Яндекс, чтобы входить на сайт по почте — подписка и баланс останутся теми же,
                 что в Telegram-боте.
               </p>
-              <div id="cabinet-linked-list" class="cabinet-linked-list"></div>
-              <button
-                type="button"
-                class="cabinet-yandex-link hidden"
-                id="cabinet-link-yandex"
-              >
+              <div id="cabinet-linked-list" class="cabinet-linked-list">
+                <p class="muted small">Загрузка…</p>
+              </div>
+              <button type="button" class="cabinet-yandex-link" id="cabinet-link-yandex">
                 <span class="cabinet-yandex-link__icon" aria-hidden="true">Я</span>
                 <span>Привязать Яндекс</span>
               </button>
@@ -168,6 +166,6 @@
       </div>
     </main>
 
-    <script src="/profile.js?v=5"></script>
+    <script src="/profile.js?v=6"></script>
   </body>
 </html>
