@@ -15,11 +15,11 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=13" />
+    <link rel="stylesheet" href="/styles.css?v=14" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
     <script src="/api.js?v=7"></script>
-    <script src="/auth-common.js"></script>
+    <script src="/auth-common.js?v=2"></script>
   </head>
   <body>
     <div class="bg-glow" aria-hidden="true"></div>
@@ -63,9 +63,12 @@
             </div>
 
             <div class="cabinet-stats">
-              <div class="cabinet-stat">
+              <div class="cabinet-stat cabinet-stat--balance">
                 <span class="muted small">Баланс</span>
                 <strong id="cabinet-balance">—</strong>
+                <button class="btn btn--ghost btn--sm cabinet-stat__action" id="cabinet-balance-topup" type="button">
+                  Пополнить
+                </button>
               </div>
               <div class="cabinet-stat">
                 <span class="muted small">Подписка</span>
@@ -74,6 +77,45 @@
               <div class="cabinet-stat">
                 <span class="muted small">Действует до</span>
                 <strong id="cabinet-sub-expires">—</strong>
+              </div>
+            </div>
+
+            <div id="cabinet-topup" class="cabinet-section cabinet-section--highlight">
+              <h2 class="h3 section-title-sm">Пополнение баланса</h2>
+              <p class="muted small">
+                Средства зачисляются на баланс — ими можно оплатить тариф, докупку трафика и устройств.
+              </p>
+
+              <div class="cabinet-topup-amounts" id="cabinet-topup-amounts">
+                <button type="button" class="cabinet-topup-amount" data-rub="100">100 ₽</button>
+                <button type="button" class="cabinet-topup-amount" data-rub="300">300 ₽</button>
+                <button type="button" class="cabinet-topup-amount is-selected" data-rub="500">500 ₽</button>
+                <button type="button" class="cabinet-topup-amount" data-rub="1000">1000 ₽</button>
+              </div>
+
+              <label class="cabinet-topup-custom">
+                <span class="muted small">Другая сумма, ₽</span>
+                <input id="cabinet-topup-custom" type="number" min="10" step="10" placeholder="500" inputmode="numeric" />
+              </label>
+
+              <h3 class="cabinet-addon__title">Способ оплаты</h3>
+              <div id="cabinet-topup-methods" class="cabinet-topup-methods">
+                <p class="muted small">Загрузка…</p>
+              </div>
+              <div id="cabinet-topup-suboptions" class="cabinet-topup-suboptions hidden"></div>
+
+              <div id="cabinet-topup-actions">
+                <button class="btn btn--primary btn--wide" id="cabinet-topup-pay" type="button">
+                  Пополнить баланс
+                </button>
+              </div>
+
+              <div id="cabinet-topup-wait" class="cabinet-topup-wait hidden">
+                <div class="spinner"></div>
+                <p class="muted small" id="cabinet-topup-status">Ожидаем оплату…</p>
+                <button class="btn btn--secondary" id="cabinet-topup-open" type="button">
+                  Открыть страницу оплаты
+                </button>
               </div>
             </div>
 
@@ -166,6 +208,6 @@
       </div>
     </main>
 
-    <script src="/profile.js?v=7"></script>
+    <script src="/profile.js?v=9"></script>
   </body>
 </html>

@@ -43,6 +43,24 @@
     location.replace(`/auth/merge/?token=${encodeURIComponent(mergeToken)}`);
   }
 
+  function extractMergeToken(payload) {
+    if (!payload) return null;
+    const body = payload.data ?? payload;
+    const nested = body?.detail && typeof body.detail === 'object' ? body.detail : null;
+    for (const item of [body, nested]) {
+      if (!item) continue;
+      if (item.merge_required && item.merge_token) return item.merge_token;
+    }
+    return null;
+  }
+
+  function redirectMergeIfNeeded(payload) {
+    const token = extractMergeToken(payload);
+    if (!token) return false;
+    redirectToMerge(token);
+    return true;
+  }
+
   window.TurraAuth = {
     saveOAuthState,
     loadOAuthState,
@@ -50,5 +68,7 @@
     applyAuthResponse,
     authErrorMessage,
     redirectToMerge,
+    extractMergeToken,
+    redirectMergeIfNeeded,
   };
 })();

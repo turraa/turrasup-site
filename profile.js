@@ -8,6 +8,275 @@
   let subscriptionData = null;
   let trialInfo = null;
   let purchaseOptions = null;
+  let topUpMethods = [];
+  let topUpSelectedMethod = null;
+  let topUpSelectedSubOption = null;
+  let topUpAmountRub = 500;
+  let topUpPaymentUrl = null;
+  let topUpPaymentMeta = null;
+  let topUpPollTimer = null;
+  let topUpInitialBalanceKopeks = null;
+
+  function methodId(m) {
+    return String(m?.method_id || m?.id || '');
+  }
+
+  function isWebPaymentMethod(m) {
+    const id = methodId(m).toLowerCase();
+    const tg = !!(window.Telegram?.WebApp?.initData);
+    if (!tg && (id === 'telegram_stars' || id.includes('stars'))) return false;
+    return m?.is_available !== false;
+  }
+
+  function stopTopUpPolling() {
+    if (topUpPollTimer) {
+      clearInterval(topUpPollTimer);
+      topUpPollTimer = null;
+    }
+  }
+
+  function resetTopUpWait() {
+    stopTopUpPolling();
+    topUpPaymentUrl = null;
+    topUpPaymentMeta = null;
+    topUpInitialBalanceKopeks = null;
+    $('cabinet-topup-wait')?.classList.add('hidden');
+    $('cabinet-topup-actions')?.classList.remove('hidden');
+    $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = false);
+  }
+
+  function scrollToTopUp() {
+    $('cabinet-topup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function suggestTopUpOnError(message) {
+    if (!message || !/недостаточно/i.test(message)) return;
+    showMsg(`${message}. Пополните баланс ниже.`, false);
+    scrollToTopUp();
+  }
+
+  function getTopUpAmountKopeks() {
+    const customRaw = $('cabinet-topup-custom')?.value?.trim();
+    const rub = customRaw ? Number(customRaw) : topUpAmountRub;
+    if (!Number.isFinite(rub) || rub < 10) {
+      throw new Error('Минимальная сумма пополнения — 10 ₽');
+    }
+    return Math.round(rub * 100);
+  }
+
+  function renderTopUpSubOptions(method) {
+    const root = $('cabinet-topup-suboptions');
+    if (!root) return;
+    const opts = method?.sub_options || method?.options || [];
+    root.innerHTML = '';
+    if (!opts.length) {
+      root.classList.add('hidden');
+      topUpSelectedSubOption = null;
+      return;
+    }
+
+    root.classList.remove('hidden');
+    if (!opts.some((o) => o.id === topUpSelectedSubOption)) {
+      topUpSelectedSubOption = opts[0]?.id || null;
+    }
+
+    opts.forEach((opt) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `cabinet-topup-suboption${topUpSelectedSubOption === opt.id ? ' is-selected' : ''}`;
+      btn.textContent = opt.name;
+      btn.addEventListener('click', () => {
+        topUpSelectedSubOption = opt.id;
+        renderTopUpSubOptions(method);
+      });
+      root.appendChild(btn);
+    });
+  }
+
+  function renderTopUpMethods() {
+    const root = $('cabinet-topup-methods');
+    if (!root) return;
+
+    const methods = topUpMethods.filter(isWebPaymentMethod);
+    root.innerHTML = '';
+
+    if (!methods.length) {
+      root.innerHTML =
+        '<p class="muted small">Способы оплаты временно недоступны. Напишите в поддержку.</p>';
+      $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = true);
+      return;
+    }
+
+    if (!methods.some((m) => methodId(m) === topUpSelectedMethod)) {
+      const prefer = methods.find((m) => {
+        const id = methodId(m).toLowerCase();
+        return id === 'yookassa' || id === 'platega';
+      });
+      topUpSelectedMethod = methodId(prefer || methods[0]);
+    }
+
+    methods.forEach((method) => {
+      const id = methodId(method);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `cabinet-topup-method${topUpSelectedMethod === id ? ' is-selected' : ''}`;
+      btn.innerHTML = `<strong>${method.display_name || method.name || id}</strong>${
+        method.description ? `<span class="cabinet-topup-method__desc">${method.description}</span>` : ''
+      }`;
+      btn.addEventListener('click', () => {
+        topUpSelectedMethod = id;
+        renderTopUpMethods();
+      });
+      root.appendChild(btn);
+    });
+
+    const current = methods.find((m) => methodId(m) === topUpSelectedMethod);
+    renderTopUpSubOptions(current);
+    $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = false);
+  }
+
+  async function loadTopUpMethods() {
+    const root = $('cabinet-topup-methods');
+    if (!root) return;
+
+    root.innerHTML = '<p class="muted small">Загрузка…</p>';
+    try {
+      topUpMethods = await api().getPaymentMethods();
+      renderTopUpMethods();
+    } catch (e) {
+      root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить способы оплаты'}</p>`;
+      $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = true);
+    }
+  }
+
+  function bindTopUpUi() {
+    $('cabinet-balance-topup')?.addEventListener('click', scrollToTopUp);
+
+    $('cabinet-topup-amounts')?.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-rub]');
+      if (!btn) return;
+      topUpAmountRub = Number(btn.dataset.rub) || 500;
+      $('cabinet-topup-custom').value = '';
+      $('cabinet-topup-amounts')
+        ?.querySelectorAll('.cabinet-topup-amount')
+        .forEach((el) => el.classList.toggle('is-selected', el === btn));
+    });
+
+    $('cabinet-topup-custom')?.addEventListener('input', () => {
+      $('cabinet-topup-amounts')
+        ?.querySelectorAll('.cabinet-topup-amount')
+        .forEach((el) => el.classList.remove('is-selected'));
+    });
+
+    $('cabinet-topup-open')?.addEventListener('click', () => {
+      try {
+        if (topUpPaymentUrl) sec().openTrustedUrl(topUpPaymentUrl, '_blank');
+      } catch (e) {
+        showMsg(e?.message || 'Ссылка оплаты недоступна', false);
+      }
+    });
+
+    $('cabinet-topup-pay')?.addEventListener('click', () => {
+      void handleTopUpPay();
+    });
+  }
+
+  function showTopUpWait() {
+    $('cabinet-topup-actions')?.classList.add('hidden');
+    $('cabinet-topup-wait')?.classList.remove('hidden');
+    $('cabinet-topup-status').textContent = 'Ожидаем оплату…';
+  }
+
+  async function startTopUpPolling() {
+    stopTopUpPolling();
+    const started = Date.now();
+    const maxMs = cfg().paymentPollMaxMs || 1200 * 1000;
+    const interval = cfg().pollIntervalMs || 3000;
+
+    topUpPollTimer = setInterval(async () => {
+      if (Date.now() - started > maxMs) {
+        stopTopUpPolling();
+        showMsg('Время ожидания истекло. Если оплата прошла — обновите страницу.', false);
+        resetTopUpWait();
+        return;
+      }
+
+      try {
+        if (topUpPaymentMeta?.method && topUpPaymentMeta?.paymentId) {
+          try {
+            await api().checkPayment(topUpPaymentMeta.method, topUpPaymentMeta.paymentId);
+          } catch {
+            /* not paid yet */
+          }
+        }
+
+        const balance = await api().getBalance();
+        $('cabinet-topup-status').textContent = `Ожидаем оплату… Баланс: ${formatRub(balance.balance_kopeks)}`;
+
+        if (
+          topUpInitialBalanceKopeks != null &&
+          balance.balance_kopeks > topUpInitialBalanceKopeks
+        ) {
+          stopTopUpPolling();
+          resetTopUpWait();
+          showMsg('Баланс пополнен!', true);
+          await reloadProfile();
+        }
+      } catch {
+        /* retry */
+      }
+    }, interval);
+  }
+
+  async function handleTopUpPay() {
+    const payBtn = $('cabinet-topup-pay');
+    showMsg('', true);
+    resetTopUpWait();
+
+    try {
+      const amountKopeks = getTopUpAmountKopeks();
+      if (!topUpSelectedMethod) {
+        throw new Error('Выберите способ оплаты');
+      }
+
+      const fresh = await api().getPaymentMethods();
+      topUpMethods = fresh;
+      const current = fresh.find((m) => methodId(m) === topUpSelectedMethod);
+      if (!current || !isWebPaymentMethod(current)) {
+        renderTopUpMethods();
+        throw new Error('Этот способ оплаты недоступен. Выберите другой.');
+      }
+
+      const balanceBefore = await api().getBalance();
+      topUpInitialBalanceKopeks = balanceBefore.balance_kopeks;
+
+      if (payBtn) payBtn.disabled = true;
+      const topUp = await api().createTopUp(
+        amountKopeks,
+        topUpSelectedMethod,
+        topUpSelectedSubOption || undefined,
+      );
+
+      if (!topUp?.payment_url || !sec().isSafePaymentUrl(topUp.payment_url)) {
+        throw new Error('Получена недопустимая ссылка оплаты. Попробуйте другой способ.');
+      }
+
+      topUpPaymentUrl = topUp.payment_url;
+      topUpPaymentMeta = {
+        method: topUpSelectedMethod,
+        paymentId: topUp.payment_id,
+      };
+
+      showTopUpWait();
+      sec().openTrustedUrl(topUp.payment_url, '_blank');
+      await startTopUpPolling();
+    } catch (e) {
+      showMsg(e?.message || 'Не удалось создать оплату', false);
+      resetTopUpWait();
+    } finally {
+      if (payBtn) payBtn.disabled = false;
+    }
+  }
 
   function formatRub(kopeks) {
     return `${(kopeks / 100).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₽`;
@@ -200,7 +469,10 @@
           showMsg(res.message || 'Трафик добавлен', true);
           await reloadProfile();
         } catch (e) {
-          showMsg(e?.message || 'Не удалось купить трафик', false);
+          suggestTopUpOnError(e?.message);
+          if (!e?.message || !/недостаточно/i.test(e.message)) {
+            showMsg(e?.message || 'Не удалось купить трафик', false);
+          }
           btn.disabled = false;
         }
       });
@@ -385,7 +657,7 @@
     trialInfo = trial;
     const user = me.user || me;
     renderProfile(user, subscription, opts?.balance_kopeks);
-    await Promise.all([loadAddons(), loadLinkedAccounts()]);
+    await Promise.all([loadAddons(), loadLinkedAccounts(), loadTopUpMethods()]);
   }
 
   function ensureAccountsSection() {
@@ -424,6 +696,8 @@
     });
   }
 
+  const VISIBLE_LINK_PROVIDERS = new Set(['telegram', 'yandex']);
+
   function providerLabel(name) {
     const map = {
       telegram: 'Telegram',
@@ -456,7 +730,9 @@
 
     try {
       const data = await api().getLinkedProviders();
-      const providers = data.providers || [];
+      const providers = (data.providers || []).filter((item) =>
+        VISIBLE_LINK_PROVIDERS.has(item.provider),
+      );
       root.innerHTML = '';
 
       if (!providers.length) {
@@ -557,6 +833,7 @@
     }
 
     $('cabinet-logout').addEventListener('click', logout);
+    bindTopUpUi();
 
     $('cabinet-buy-renew')?.addEventListener('click', () => {
       sessionStorage.setItem('turravpn_checkout_renew', '1');
@@ -582,7 +859,10 @@
         showMsg(res.message || 'Устройства добавлены', true);
         await reloadProfile();
       } catch (e) {
-        showMsg(e?.message || 'Не удалось купить устройства', false);
+        suggestTopUpOnError(e?.message);
+        if (!e?.message || !/недостаточно/i.test(e.message)) {
+          showMsg(e?.message || 'Не удалось купить устройства', false);
+        }
         btn.disabled = false;
       }
     });

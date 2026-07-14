@@ -1,7 +1,7 @@
 DEPLOY FROM THIS FOLDER ONLY: dist-web/
 DO NOT upload website/ — that is the old static site.
 
-build=2026-07-13T23:21:11.038Z
+build=2026-07-14T00:14:21.125Z
 main=assets/index-YwSwCzIV.js
 files=35
 

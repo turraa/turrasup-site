@@ -1395,6 +1395,10 @@ main,
     grid-template-columns: 1fr;
   }
 
+  .cabinet-topup-amounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .header-user__name {
     display: none;
   }
@@ -1631,6 +1635,117 @@ body.sub-page {
 
 .cabinet-stat strong {
   font-size: 1rem;
+}
+
+.cabinet-stat--balance {
+  position: relative;
+}
+
+.cabinet-stat__action {
+  justify-self: start;
+  margin-top: 2px;
+}
+
+.cabinet-topup-amounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 12px;
+}
+
+.cabinet-topup-amount {
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.cabinet-topup-amount:hover,
+.cabinet-topup-amount.is-selected {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.cabinet-topup-custom {
+  display: grid;
+  gap: 6px;
+  max-width: 220px;
+  margin-bottom: 18px;
+}
+
+.cabinet-topup-custom input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font: inherit;
+}
+
+.cabinet-topup-methods {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cabinet-topup-method {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.cabinet-topup-method:hover,
+.cabinet-topup-method.is-selected {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.cabinet-topup-method__desc {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.cabinet-topup-suboptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.cabinet-topup-suboption {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cabinet-topup-suboption.is-selected {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.cabinet-topup-wait {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 12px;
 }
 
 .cabinet-stat--ok {

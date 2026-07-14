@@ -58,7 +58,10 @@
     card.className = 'merge-account-card';
     card.dataset.userId = String(user.id);
 
-    const methods = user.auth_methods?.map(providerLabel).join(', ') || '—';
+    const methods = (user.auth_methods || [])
+      .filter((m) => m === 'telegram' || m === 'yandex')
+      .map(providerLabel)
+      .join(', ') || '—';
     const sub = user.subscription;
     let subText = 'Нет активной подписки';
     if (sub) {
@@ -110,8 +113,8 @@
     preview = data;
     const root = $('merge-accounts');
     root.innerHTML = '';
-    root.appendChild(renderAccountCard(data.primary, 'Текущий аккаунт'));
-    root.appendChild(renderAccountCard(data.secondary, 'Аккаунт Яндекса'));
+    root.appendChild(renderAccountCard(data.primary, 'Ваш Telegram-аккаунт'));
+    root.appendChild(renderAccountCard(data.secondary, 'Аккаунт с этим Яндексом'));
 
     const total = (data.primary.balance_kopeks || 0) + (data.secondary.balance_kopeks || 0);
     $('merge-balance-sum').textContent = `балансы суммируются (итого ~${formatRub(total)});`;

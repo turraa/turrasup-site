@@ -16,7 +16,7 @@
     <script src="/config.js"></script>
     <script src="/security.js"></script>
     <script src="/api.js?v=7"></script>
-    <script src="/auth-common.js"></script>
+    <script src="/auth-common.js?v=2"></script>
   </head>
   <body class="sub-page">
     <div class="bg-glow" aria-hidden="true"></div>
@@ -69,46 +69,83 @@
         const isLink = saved.mode === 'link';
         if (isLink) title.textContent = 'Привязка аккаунта';
 
-        try {
-          if (isLink) {
-            status.textContent = 'Привязываем Яндекс…';
-            const result = await TurraApi.linkProviderCallback(
+        async function finishLink() {
+          status.textContent = 'Привязываем Яндекс…';
+          let result;
+          try {
+            result = await TurraApi.linkProviderCallback(
               saved.provider,
               code,
               state,
               deviceId,
             );
+          } catch (e) {
             TurraAuth.clearOAuthState();
-
-            if (result.merge_required && result.merge_token) {
-              TurraAuth.redirectToMerge(result.merge_token);
-              return;
-            }
-
-            if (!result.success) {
-              throw new Error(result.message || 'Не удалось привязать аккаунт');
-            }
-
-            location.replace('/profile/#accounts');
-            return;
+            if (TurraAuth.redirectMergeIfNeeded(e)) return;
+            throw e;
           }
-
-          const auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
           TurraAuth.clearOAuthState();
 
-          if (auth.merge_required && auth.merge_token) {
-            if (auth.access_token) TurraApi.storage.access = auth.access_token;
-            if (auth.refresh_token) TurraApi.storage.refresh = auth.refresh_token;
-            TurraAuth.redirectToMerge(auth.merge_token);
-            return;
+          if (TurraAuth.redirectMergeIfNeeded(result)) return;
+
+          if (result.merge_required) {
+            throw new Error(
+              'Этот Яндекс уже привязан к другому аккаунту. Начните привязку заново из личного кабинета.',
+            );
           }
+
+          if (!result.success) {
+            throw new Error(result.message || 'Не удалось привязать аккаунт');
+          }
+
+          location.replace('/profile/#accounts');
+        }
+
+        async function finishLogin() {
+          let auth;
+          try {
+            auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
+          } catch (e) {
+            TurraAuth.clearOAuthState();
+            if (TurraAuth.redirectMergeIfNeeded(e)) return;
+            throw e;
+          }
+          TurraAuth.clearOAuthState();
+
+          if (TurraAuth.redirectMergeIfNeeded(auth)) return;
+
+          if (auth.access_token) TurraApi.storage.access = auth.access_token;
+          if (auth.refresh_token) TurraApi.storage.refresh = auth.refresh_token;
 
           TurraAuth.applyAuthResponse(auth);
           sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
           location.replace('/');
+        }
+
+        try {
+          if (isLink) {
+            await finishLink();
+            return;
+          }
+
+          try {
+            await finishLogin();
+          } catch (e) {
+            const msg = e?.message || '';
+            if (
+              /account linking/i.test(msg) &&
+              typeof TurraApi.linkProviderCallback === 'function'
+            ) {
+              title.textContent = 'Привязка аккаунта';
+              await finishLink();
+              return;
+            }
+            throw e;
+          }
         } catch (e) {
           spinner.classList.add('hidden');
           status.textContent = '';
+          if (TurraAuth.redirectMergeIfNeeded(e)) return;
           errorEl.textContent = TurraAuth.authErrorMessage(e);
           errorEl.classList.remove('hidden');
           back.classList.remove('hidden');
