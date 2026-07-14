@@ -31,4 +31,21 @@ window.TURRA_CONFIG = {
 
   pollIntervalMs: 3000,
   paymentPollMaxMs: 20 * 60 * 1000,
+
+  /** Публичная папка с видеоинструкцией на Яндекс.Диске */
+  setupVideoPublicUrl: 'https://disk.yandex.ru/d/ghOU8icASWFLrQ',
+
+  /** Ссылки на мобильные клиенты */
+  setupApps: [
+    {
+      label: 'Happ',
+      ios: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973',
+      android: 'https://play.google.com/store/apps/details?id=com.happproxy',
+    },
+    {
+      label: 'INCY',
+      ios: 'https://apps.apple.com/ru/app/incy/id6756943388',
+      android: 'https://play.google.com/store/apps/details?id=llc.itdev.incy',
+    },
+  ],
 };

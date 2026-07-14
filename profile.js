@@ -583,8 +583,16 @@
 
     const subUrl = sub?.subscription_url;
     const keyBlock = $('cabinet-key');
+    const setupBlock = $('cabinet-setup-guide');
     if (active && subUrl && sec().isSafeSubscriptionUrl(subUrl)) {
       keyBlock.classList.remove('hidden');
+      if (setupBlock) {
+        setupBlock.classList.remove('hidden');
+        if (!setupBlock.dataset.rendered && window.TurraSetupGuide?.render) {
+          window.TurraSetupGuide.render(setupBlock);
+          setupBlock.dataset.rendered = '1';
+        }
+      }
       $('cabinet-sub-link').value = subUrl;
       $('cabinet-btn-copy').onclick = async () => {
         await navigator.clipboard.writeText(subUrl);
@@ -598,6 +606,7 @@
       };
     } else {
       keyBlock.classList.add('hidden');
+      if (setupBlock) setupBlock.classList.add('hidden');
     }
 
     renderUsage(subscription);
