@@ -32,7 +32,22 @@ window.TURRA_CONFIG = {
   pollIntervalMs: 3000,
   paymentPollMaxMs: 20 * 60 * 1000,
 
-  /** Публичная папка с видеоинструкцией на Яндекс.Диске */
+  /**
+   * Видеоинструкция — варианты (загрузка на Timeweb НЕ нужна):
+   *
+   * 1) YouTube (рекомендуется): загрузите видео как «Доступ по ссылке»,
+   *    затем вставьте embed-ссылку (Смотреть → Поделиться → Встроить):
+   *    setupVideoEmbedUrl: 'https://www.youtube.com/embed/XXXXXXXX',
+   *
+   * 2) GitHub Releases: залейте сжатый mp4 до 2 ГБ (например instry.mp4 ~200 МБ):
+   *    setupVideoUrl: 'https://github.com/turraa/turrasup-site/releases/latest/download/instry.mp4',
+   *
+   * 3) Яндекс.Диск — работает автоматически, если поля выше пустые:
+   */
+  setupVideoEmbedUrl: '',
+
+  setupVideoUrl: '',
+
   setupVideoPublicUrl: 'https://disk.yandex.ru/d/ghOU8icASWFLrQ',
 
   /** Ссылки на мобильные клиенты */

@@ -50,15 +50,34 @@
     '/cabinet/auth/password/reset',
   ];
 
+  const REQUEST_TIMEOUT_MS = 25000;
+
   function shouldRetryRefresh(path) {
     if (NO_REFRESH_PATHS.some((p) => path === p || path.startsWith(p))) return false;
     if (path.includes('/cabinet/auth/oauth/') && path.includes('/callback')) return false;
     return !!storage.refresh;
   }
 
+  async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (e) {
+      if (e && e.name === 'AbortError') {
+        const err = new Error('Сервер не ответил вовремя. Проверьте интернет и попробуйте снова.');
+        err.code = 'TIMEOUT';
+        throw err;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function refreshToken() {
     if (!storage.refresh) return null;
-    const res = await fetch(`${cfg().apiBase}/cabinet/auth/refresh`, {
+    const res = await fetchWithTimeout(`${cfg().apiBase}/cabinet/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,13 +108,13 @@
       headers.Authorization = `Bearer ${storage.access}`;
     }
 
-    let res = await fetch(`${cfg().apiBase}${path}`, { ...options, method, headers });
+    let res = await fetchWithTimeout(`${cfg().apiBase}${path}`, { ...options, method, headers });
 
     if (res.status === 401 && shouldRetryRefresh(path)) {
       const token = await refreshToken();
       if (token) {
         headers.Authorization = `Bearer ${token}`;
-        res = await fetch(`${cfg().apiBase}${path}`, { ...options, method, headers });
+        res = await fetchWithTimeout(`${cfg().apiBase}${path}`, { ...options, method, headers });
       }
     }
 

@@ -9,12 +9,39 @@
     return Array.isArray(cfg().setupApps) ? cfg().setupApps : [];
   }
 
+  function setupVideoEmbedUrl() {
+    return normalizeEmbedUrl(cfg().setupVideoEmbedUrl || '');
+  }
+
+  function setupVideoUrl() {
+    return cfg().setupVideoUrl || '';
+  }
+
   function setupVideoPublicUrl() {
     return cfg().setupVideoPublicUrl || '';
   }
 
+  function setupVideoFallbackUrl() {
+    return setupVideoPublicUrl() || setupVideoUrl();
+  }
+
   function downloadUrl() {
     return cfg().downloadUrl || '/#download';
+  }
+
+  function normalizeEmbedUrl(url) {
+    if (!url) return '';
+
+    const ytWatch = url.match(/youtube\.com\/watch\?v=([\w-]+)/);
+    if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}`;
+
+    const ytShort = url.match(/youtu\.be\/([\w-]+)/);
+    if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}`;
+
+    const rutube = url.match(/rutube\.ru\/video\/([a-f0-9]+)/i);
+    if (rutube) return `https://rutube.ru/play/embed/${rutube[1]}`;
+
+    return url;
   }
 
   const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mkv)$/i;
@@ -28,6 +55,14 @@
     if (resource?.type === 'file' && isVideoFile(resource)) return resource;
     const items = resource?._embedded?.items || [];
     return items.find((item) => item.type === 'file' && isVideoFile(item)) || null;
+  }
+
+  async function resolveSetupVideoUrl() {
+    const direct = setupVideoUrl();
+    if (direct) return direct;
+    const diskUrl = setupVideoPublicUrl();
+    if (!diskUrl) return null;
+    return resolveYandexPublicVideoUrl(diskUrl);
   }
 
   async function resolveYandexPublicVideoUrl(publicUrl) {
@@ -105,19 +140,21 @@
     `;
   }
 
-  function renderVideoPanel(diskUrl) {
+  function renderVideoPanel(fallbackUrl) {
     return `
       <div class="setup-guide__panel" role="tabpanel" data-setup-video-panel>
         <div class="setup-guide__video-wrap">
-          <div class="setup-guide__video-placeholder" data-setup-video-loading>
+          <div class="setup-guide__video-placeholder hidden" data-setup-video-loading>
             <div class="spinner" aria-hidden="true"></div>
             <p class="muted small">Загружаем видео…</p>
           </div>
           <div class="setup-guide__video-fallback hidden" data-setup-video-fallback>
-            <p class="muted small">Не удалось встроить видео на страницу.</p>
-            <a class="setup-guide__video-link" href="${diskUrl}" target="_blank" rel="noopener noreferrer">
-              Открыть видео на Яндекс.Диске
-            </a>
+            <p class="muted small">Не удалось воспроизвести видео на странице.</p>
+            ${
+              fallbackUrl
+                ? `<a class="setup-guide__video-link" href="${fallbackUrl}" target="_blank" rel="noopener noreferrer">Открыть видео в новой вкладке</a>`
+                : ''
+            }
           </div>
         </div>
       </div>
@@ -126,7 +163,8 @@
 
   function render(root) {
     const apps = setupApps();
-    const diskUrl = setupVideoPublicUrl();
+    const embedUrl = setupVideoEmbedUrl();
+    const fallbackUrl = setupVideoFallbackUrl();
 
     root.innerHTML = `
       <section class="setup-guide" aria-labelledby="setup-guide-title">
@@ -144,7 +182,7 @@
             Пошаговая инструкция
           </button>
         </div>
-        <div data-setup-panel="video">${renderVideoPanel(diskUrl)}</div>
+        <div data-setup-panel="video">${renderVideoPanel(fallbackUrl)}</div>
         <div class="hidden" data-setup-panel="text">${renderTextPanel(apps)}</div>
       </section>
     `;
@@ -166,40 +204,57 @@
       });
     });
 
-    void loadVideo(root, diskUrl);
+    void loadVideo(root, embedUrl);
   }
 
-  async function loadVideo(root, diskUrl) {
+  async function loadVideo(root, embedUrl) {
     const wrap = root.querySelector('.setup-guide__video-wrap');
     const loading = root.querySelector('[data-setup-video-loading]');
     const fallback = root.querySelector('[data-setup-video-fallback]');
-    if (!wrap || !diskUrl) {
-      loading?.classList.add('hidden');
+    if (!wrap) return;
+
+    if (embedUrl) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'setup-guide__embed';
+      iframe.src = embedUrl;
+      iframe.title = 'Видеоинструкция TurraVPN';
+      iframe.setAttribute(
+        'allow',
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+      );
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+      return;
+    }
+
+    loading?.classList.remove('hidden');
+
+    let url = null;
+    try {
+      url = await resolveSetupVideoUrl();
+    } catch {
+      url = null;
+    }
+
+    loading?.classList.add('hidden');
+
+    if (!url) {
       fallback?.classList.remove('hidden');
       return;
     }
 
-    try {
-      const url = await resolveYandexPublicVideoUrl(diskUrl);
-      loading?.classList.add('hidden');
-
-      if (!url) {
-        fallback?.classList.remove('hidden');
-        return;
-      }
-
-      const video = document.createElement('video');
-      video.className = 'setup-guide__video';
-      video.controls = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      video.src = url;
-      video.textContent = 'Ваш браузер не поддерживает воспроизведение видео.';
-      wrap.appendChild(video);
-    } catch {
-      loading?.classList.add('hidden');
+    const video = document.createElement('video');
+    video.className = 'setup-guide__video';
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.src = url;
+    video.textContent = 'Ваш браузер не поддерживает воспроизведение видео.';
+    video.addEventListener('error', () => {
+      video.remove();
       fallback?.classList.remove('hidden');
-    }
+    });
+    wrap.appendChild(video);
   }
 
   global.TurraSetupGuide = { render };

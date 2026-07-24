@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>TurraVPN — статус сервиса</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #050508;
+      --card: rgba(26, 16, 51, 0.72);
+      --border: rgba(168, 85, 247, 0.25);
+      --text: #fff;
+      --muted: #94a3b8;
+      --purple: #a855f7;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(109,40,217,.35), transparent),
+                  radial-gradient(900px 500px at 90% 0%, rgba(168,85,247,.18), transparent),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; }
+    h1 { font-size: 1.75rem; margin: 0 0 8px; }
+    .sub { color: var(--muted); margin-bottom: 28px; }
+    .hero {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 18px currentColor;
+    }
+    .dot.ok { background: var(--green); color: var(--green); }
+    .dot.degraded { background: var(--yellow); color: var(--yellow); }
+    .dot.down, .dot.unknown { background: var(--red); color: var(--red); }
+    .hero-title { font-size: 1.15rem; font-weight: 600; }
+    .hero-meta { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .grid { display: grid; gap: 12px; }
+    .row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .row-label { font-weight: 500; }
+    .badge {
+      font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor;
+    }
+    .badge.ok { color: var(--green); }
+    .badge.degraded { color: var(--yellow); }
+    .badge.down, .badge.unknown { color: var(--red); }
+    .foot { margin-top: 28px; color: var(--muted); font-size: .85rem; }
+    a { color: var(--purple); }
+    .err { color: var(--red); margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>TurraVPN — статус</h1>
+    <p class="sub">Актуальное состояние узлов. Обновляется каждые 5 минут.</p>
+
+    <div class="hero" id="hero">
+      <div class="dot unknown" id="hero-dot"></div>
+      <div>
+        <div class="hero-title" id="hero-title">Загрузка…</div>
+        <div class="hero-meta" id="hero-meta"></div>
+      </div>
+    </div>
+
+    <div class="grid" id="services"></div>
+    <p class="foot">
+      Проблема только на одном узле? Переключите сервер в приложении или напишите
+      <a href="https://t.me/turravpn_sup">поддержку</a>.
+      · <a href="https://buy.turrasup.ru">buy.turrasup.ru</a>
+    </p>
+    <p class="err" id="error" hidden></p>
+  </div>
+
+  <script>
+    const STATUS_LABEL = {
+      ok: 'OK',
+      degraded: 'degraded',
+      down: 'down',
+      unknown: 'unknown'
+    };
+
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      try {
+        return new Date(iso).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+      } catch { return iso; }
+    }
+
+    function render(data) {
+      const overall = data.overall || 'unknown';
+      const dot = document.getElementById('hero-dot');
+      dot.className = 'dot ' + overall;
+      document.getElementById('hero-title').textContent =
+        overall === 'ok' ? 'Все основные узлы работают' :
+        overall === 'degraded' ? 'Частичные проблемы' : 'Есть недоступные узлы';
+      const s = data.summary || {};
+      document.getElementById('hero-meta').textContent =
+        `Обновлено: ${fmtTime(data.updated_at)} · подписок ACTIVE ~${(s.active_subscriptions ?? s.online_users) ?? 0} · OK ${s.nodes_ok ?? 0}/${s.nodes_total ?? 0}` +
+        (s.last_error ? ` · ${s.last_error}` : '');
+
+      const box = document.getElementById('services');
+      box.innerHTML = '';
+      (data.services || []).forEach(svc => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const st = svc.status || 'unknown';
+        row.innerHTML =
+          `<span class="row-label">${svc.label || svc.id}</span>` +
+          `<span class="badge ${st}">${STATUS_LABEL[st] || st}</span>`;
+        box.appendChild(row);
+      });
+    }
+
+    async function load() {
+      const errEl = document.getElementById('error');
+      try {
+        const r = await fetch('/status.json?_=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        render(await r.json());
+        errEl.hidden = true;
+      } catch (e) {
+        errEl.hidden = false;
+        errEl.textContent = 'Не удалось загрузить status.json — ' + e.message;
+      }
+    }
+
+    load();
+    setInterval(load, 60000);
+  </script>
+</body>
+</html>
