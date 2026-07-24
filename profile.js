@@ -316,21 +316,20 @@
 
   function isSubscriptionActive(subscription) {
     if (!subscription) return false;
-    if (subscription.has_subscription === true) return true;
 
     const sub = subscriptionDetails(subscription);
-    if (!sub) return false;
+    if (sub?.is_active === true || sub?.is_limited === true) return true;
 
-    if (sub.is_active === true || sub.is_limited === true) return true;
-    if (sub.subscription_url) return true;
-    if (sub.status === 'active' || sub.status === 'limited' || sub.status === 'ACTIVE') return true;
+    const status = (sub?.status || '').toLowerCase();
+    if (status === 'active' || status === 'limited') return true;
 
-    const expires =
-      sub.end_date || sub.expires_at || sub.expire_at;
+    const expires = sub?.end_date || sub?.expires_at || sub?.expire_at;
     if (expires) {
       const end = new Date(expires);
       if (!Number.isNaN(end.getTime()) && end.getTime() > Date.now()) return true;
     }
+
+    if ((sub?.days_left ?? 0) > 0) return true;
 
     return false;
   }
@@ -656,17 +655,26 @@
   }
 
   async function reloadProfile() {
-    const [me, subscription, opts, trial] = await Promise.all([
+    const [me, subscription] = await Promise.all([
       api().getMe(),
       api().getSubscription(),
+    ]);
+    const user = me.user || me;
+    renderProfile(user, subscription, null);
+
+    const [opts, trial] = await Promise.all([
       api().getPurchaseOptions().catch(() => null),
       api().getTrialInfo().catch(() => null),
     ]);
     purchaseOptions = opts;
     trialInfo = trial;
-    const user = me.user || me;
     renderProfile(user, subscription, opts?.balance_kopeks);
-    await Promise.all([loadAddons(), loadLinkedAccounts(), loadTopUpMethods()]);
+
+    await Promise.all([
+      loadAddons().catch(() => undefined),
+      loadLinkedAccounts().catch(() => undefined),
+      loadTopUpMethods().catch(() => undefined),
+    ]);
   }
 
   function ensureAccountsSection() {

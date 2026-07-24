@@ -134,6 +134,7 @@
 
           if (TurraAuth.redirectMergeIfNeeded(auth)) return;
 
+          TurraApi.storage.clear();
           if (auth.access_token) TurraApi.storage.access = auth.access_token;
           if (auth.refresh_token) TurraApi.storage.refresh = auth.refresh_token;
 

@@ -1,8 +1,8 @@
 DEPLOY FROM THIS FOLDER ONLY: dist-web/
 DO NOT upload website/ — that is the old static site.
 
-build=2026-07-24T23:07:27.476Z
-main=assets/index-9fYRbZIu.js
+build=2026-07-24T23:17:06.579Z
+main=assets/index-JCLP66Zj.js
 files=38
 
 Upload ALL files and folders below (overwrite on server):
@@ -14,15 +14,15 @@ Upload ALL files and folders below (overwrite on server):
   assets/canvas-IeHxA95V.js
   assets/canvas-ulxuyGo_.css
   assets/cat-logo.png
+  assets/checkout-BCOK-Hsl.js
   assets/checkout-UP11MMiF.css
-  assets/checkout-pu5Rbye2.js
   assets/download-laptop.png
   assets/favicon-32.png
   assets/favicon.svg
   assets/feature-ring.png
   assets/footer-shield.png
   assets/hero-app.png
-  assets/index-9fYRbZIu.js
+  assets/index-JCLP66Zj.js
   assets/index-zR0UpJhF.css
   assets/logo.svg
   assets/motion-DjtP4-eQ.js

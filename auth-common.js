@@ -74,6 +74,7 @@
       api.storage.clear();
       throw new Error('Подтвердите email по ссылке из письма, затем войдите снова.');
     }
+    api.storage.clear();
     if (auth?.access_token) api.storage.access = auth.access_token;
     if (auth?.refresh_token) api.storage.refresh = auth.refresh_token;
   }
