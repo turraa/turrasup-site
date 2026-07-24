@@ -1,2 +1,56 @@
-deploy=2026-07-07T00:45:00Z
-version=scroll-download-latest-exe
+DEPLOY FROM THIS FOLDER ONLY: dist-web/
+DO NOT upload website/ — that is the old static site.
+
+build=2026-07-24T23:07:27.476Z
+main=assets/index-9fYRbZIu.js
+files=38
+
+Upload ALL files and folders below (overwrite on server):
+  .htaccess
+  BUILD.json
+  DEPLOY.txt
+  api.js
+  assets/VIDEO-DEPLOY.txt
+  assets/canvas-IeHxA95V.js
+  assets/canvas-ulxuyGo_.css
+  assets/cat-logo.png
+  assets/checkout-UP11MMiF.css
+  assets/checkout-pu5Rbye2.js
+  assets/download-laptop.png
+  assets/favicon-32.png
+  assets/favicon.svg
+  assets/feature-ring.png
+  assets/footer-shield.png
+  assets/hero-app.png
+  assets/index-9fYRbZIu.js
+  assets/index-zR0UpJhF.css
+  assets/logo.svg
+  assets/motion-DjtP4-eQ.js
+  assets/react-vendor-C2StAl4u.js
+  assets/screenshots/app-home.png
+  assets/screenshots/app-servers.png
+  auth-common.js
+  auth/merge/index.html
+  auth/merge/merge.js
+  auth/oauth/callback/index.html
+  config.js
+  favicon.svg
+  index.html
+  profile.js
+  profile/index.html
+  reset-password/index.html
+  security.js
+  setup-guide.js
+  status/index.html
+  styles.css
+  verify-email/index.html
+
+VIDEO (no Timeweb upload needed): set setupVideoEmbedUrl (YouTube) in config.js,
+  or use setupVideoPublicUrl (Yandex Disk, already configured).
+  Status: video=Yandex Disk (setupVideoPublicUrl in config.js)
+
+After upload open: https://buy.turrasup.ru/BUILD.json
+If BUILD.json on server shows the same build= timestamp — deploy succeeded.
+
+Main page uses hashed assets from index.html — always upload index.html + assets/* together.
+Profile uses ?v= query strings — bump them in public/ and rebuild if LK looks stale.

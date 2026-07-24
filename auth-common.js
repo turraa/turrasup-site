@@ -1,18 +1,31 @@
 (function () {
-  function saveOAuthState(provider, state, mode) {
-    sessionStorage.setItem(
-      'turravpn_oauth',
-      JSON.stringify({ provider, state, mode: mode || 'login', ts: Date.now() }),
-    );
+  const OAUTH_KEY = 'turravpn_oauth';
+  const OAUTH_PENDING_KEY = 'turravpn_oauth_pending';
+  const OAUTH_TTL_MS = 15 * 60 * 1000;
+
+  function writeOAuthRaw(key, value) {
+    const raw = JSON.stringify(value);
+    try {
+      localStorage.setItem(key, raw);
+    } catch {
+      /* ignore quota */
+    }
+    sessionStorage.setItem(key, raw);
   }
 
-  function loadOAuthState() {
+  function readOAuthRaw(key) {
+    let raw = null;
     try {
-      const raw = sessionStorage.getItem('turravpn_oauth');
-      if (!raw) return null;
+      raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+    } catch {
+      raw = sessionStorage.getItem(key);
+    }
+    if (!raw) return null;
+    try {
       const data = JSON.parse(raw);
-      if (Date.now() - data.ts > 10 * 60 * 1000) {
-        sessionStorage.removeItem('turravpn_oauth');
+      if (!data?.ts || Date.now() - data.ts > OAUTH_TTL_MS) {
+        clearOAuthPending();
+        if (key === OAUTH_KEY) clearOAuthState();
         return null;
       }
       return data;
@@ -21,8 +34,38 @@
     }
   }
 
+  function saveOAuthState(provider, state, mode) {
+    writeOAuthRaw(OAUTH_KEY, { provider, state, mode: mode || 'login', ts: Date.now() });
+  }
+
+  function loadOAuthState() {
+    return readOAuthRaw(OAUTH_KEY);
+  }
+
   function clearOAuthState() {
-    sessionStorage.removeItem('turravpn_oauth');
+    sessionStorage.removeItem(OAUTH_KEY);
+    try {
+      localStorage.removeItem(OAUTH_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function saveOAuthPending(code, state, deviceId) {
+    writeOAuthRaw(OAUTH_PENDING_KEY, { code, state, deviceId: deviceId || null, ts: Date.now() });
+  }
+
+  function loadOAuthPending() {
+    return readOAuthRaw(OAUTH_PENDING_KEY);
+  }
+
+  function clearOAuthPending() {
+    sessionStorage.removeItem(OAUTH_PENDING_KEY);
+    try {
+      localStorage.removeItem(OAUTH_PENDING_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
   function applyAuthResponse(auth) {
@@ -65,6 +108,9 @@
     saveOAuthState,
     loadOAuthState,
     clearOAuthState,
+    saveOAuthPending,
+    loadOAuthPending,
+    clearOAuthPending,
     applyAuthResponse,
     authErrorMessage,
     redirectToMerge,

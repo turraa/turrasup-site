@@ -16,7 +16,7 @@
     <script src="/config.js"></script>
     <script src="/security.js"></script>
     <script src="/api.js?v=8"></script>
-    <script src="/auth-common.js?v=2"></script>
+    <script src="/auth-common.js?v=3"></script>
   </head>
   <body class="sub-page">
     <div class="bg-glow" aria-hidden="true"></div>
@@ -30,44 +30,59 @@
         <div class="spinner" id="spinner" style="margin: 20px auto 0"></div>
         <p class="sub-status" id="status">Завершаем авторизацию…</p>
         <p id="error" class="alert hidden"></p>
-        <a id="back" class="btn btn--primary btn--wide hidden" href="/profile/#accounts">В личный кабинет</a>
+        <a id="back" class="btn btn--primary btn--wide hidden" href="/">На главную</a>
       </div>
     </main>
     <script>
       (async function () {
         const params = new URLSearchParams(location.search);
-        const code = params.get('code');
-        const state = params.get('state');
-        const deviceId = params.get('device_id');
+        let code = params.get('code');
+        let state = params.get('state');
+        let deviceId = params.get('device_id');
+
+        if (!code || !state) {
+          const pending = TurraAuth.loadOAuthPending?.();
+          if (pending?.code && pending?.state) {
+            code = pending.code;
+            state = pending.state;
+            deviceId = pending.deviceId || deviceId;
+          }
+        } else {
+          TurraAuth.saveOAuthPending?.(code, state, deviceId);
+        }
+
         const spinner = document.getElementById('spinner');
         const status = document.getElementById('status');
         const title = document.getElementById('title');
         const errorEl = document.getElementById('error');
         const back = document.getElementById('back');
 
-        history.replaceState({}, '', '/auth/oauth/callback');
-
-        if (!code || !state) {
+        function showError(message, homeHref) {
           spinner.classList.add('hidden');
           status.textContent = '';
-          errorEl.textContent = 'Вход отменён или ссылка устарела.';
+          errorEl.textContent = message;
           errorEl.classList.remove('hidden');
+          back.href = homeHref || '/';
+          back.textContent = homeHref === '/profile/#accounts' ? 'В личный кабинет' : 'На главную';
           back.classList.remove('hidden');
+        }
+
+        if (!code || !state) {
+          showError('Вход отменён или ссылка устарела. Нажмите «На главную» и войдите через Яндекс снова.');
           return;
         }
 
         const saved = TurraAuth.loadOAuthState();
         if (!saved || saved.state !== state) {
-          spinner.classList.add('hidden');
-          status.textContent = '';
-          errorEl.textContent = 'Сессия входа истекла. Попробуйте снова.';
-          errorEl.classList.remove('hidden');
-          back.classList.remove('hidden');
+          showError('Сессия входа истекла. Вернитесь на главную и нажмите «Войти через Яндекс» ещё раз.');
           return;
         }
 
         const isLink = saved.mode === 'link';
-        if (isLink) title.textContent = 'Привязка аккаунта';
+        if (isLink) {
+          title.textContent = 'Привязка аккаунта';
+          back.href = '/profile/#accounts';
+        }
 
         async function finishLink() {
           status.textContent = 'Привязываем Яндекс…';
@@ -81,10 +96,12 @@
             );
           } catch (e) {
             TurraAuth.clearOAuthState();
+            TurraAuth.clearOAuthPending?.();
             if (TurraAuth.redirectMergeIfNeeded(e)) return;
             throw e;
           }
           TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
 
           if (TurraAuth.redirectMergeIfNeeded(result)) return;
 
@@ -98,6 +115,7 @@
             throw new Error(result.message || 'Не удалось привязать аккаунт');
           }
 
+          history.replaceState({}, '', '/auth/oauth/callback');
           location.replace('/profile/#accounts');
         }
 
@@ -107,10 +125,12 @@
             auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
           } catch (e) {
             TurraAuth.clearOAuthState();
+            TurraAuth.clearOAuthPending?.();
             if (TurraAuth.redirectMergeIfNeeded(e)) return;
             throw e;
           }
           TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
 
           if (TurraAuth.redirectMergeIfNeeded(auth)) return;
 
@@ -119,6 +139,7 @@
 
           TurraAuth.applyAuthResponse(auth);
           sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
+          history.replaceState({}, '', '/auth/oauth/callback');
           location.replace('/');
         }
 
@@ -143,13 +164,13 @@
             throw e;
           }
         } catch (e) {
-          spinner.classList.add('hidden');
-          status.textContent = '';
           if (TurraAuth.redirectMergeIfNeeded(e)) return;
-          errorEl.textContent = TurraAuth.authErrorMessage(e);
-          errorEl.classList.remove('hidden');
-          back.classList.remove('hidden');
+          showError(
+            TurraAuth.authErrorMessage(e),
+            isLink ? '/profile/#accounts' : '/',
+          );
           TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
         }
       })();
     </script>
