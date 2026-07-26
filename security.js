@@ -26,7 +26,7 @@
   ];
 
   const OAUTH_HOSTS = {
-    yandex: ['oauth.yandex.ru', 'login.yandex.ru'],
+    yandex: ['oauth.yandex.ru', 'oauth.yandex.com', 'login.yandex.ru'],
     google: ['accounts.google.com'],
     discord: ['discord.com'],
     vk: ['oauth.vk.com', 'id.vk.com'],

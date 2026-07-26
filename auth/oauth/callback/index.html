@@ -12,11 +12,11 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=5" />
+    <link rel="stylesheet" href="/styles.css?v=13" />
     <script src="/config.js"></script>
     <script src="/security.js"></script>
-    <script src="/api.js"></script>
-    <script src="/auth-common.js"></script>
+    <script src="/api.js?v=8"></script>
+    <script src="/auth-common.js?v=3"></script>
   </head>
   <body class="sub-page">
     <div class="bg-glow" aria-hidden="true"></div>
@@ -26,57 +26,152 @@
         <span>Turra</span>
       </a>
       <div class="sub-card glass">
-        <h1>Вход в аккаунт</h1>
+        <h1 id="title">Вход в аккаунт</h1>
         <div class="spinner" id="spinner" style="margin: 20px auto 0"></div>
         <p class="sub-status" id="status">Завершаем авторизацию…</p>
         <p id="error" class="alert hidden"></p>
-        <a id="back" class="btn btn--primary btn--wide hidden" href="/#buy">На главную</a>
+        <a id="back" class="btn btn--primary btn--wide hidden" href="/">На главную</a>
       </div>
     </main>
     <script>
       (async function () {
         const params = new URLSearchParams(location.search);
-        const code = params.get('code');
-        const state = params.get('state');
-        const deviceId = params.get('device_id');
+        let code = params.get('code');
+        let state = params.get('state');
+        let deviceId = params.get('device_id');
+
+        if (!code || !state) {
+          const pending = TurraAuth.loadOAuthPending?.();
+          if (pending?.code && pending?.state) {
+            code = pending.code;
+            state = pending.state;
+            deviceId = pending.deviceId || deviceId;
+          }
+        } else {
+          TurraAuth.saveOAuthPending?.(code, state, deviceId);
+        }
+
         const spinner = document.getElementById('spinner');
         const status = document.getElementById('status');
+        const title = document.getElementById('title');
         const errorEl = document.getElementById('error');
         const back = document.getElementById('back');
 
-        history.replaceState({}, '', '/auth/oauth/callback');
-
-        if (!code || !state) {
+        function showError(message, homeHref) {
           spinner.classList.add('hidden');
           status.textContent = '';
-          errorEl.textContent = 'Вход отменён или ссылка устарела.';
+          errorEl.textContent = message;
           errorEl.classList.remove('hidden');
+          back.href = homeHref || '/';
+          back.textContent = homeHref === '/profile/#accounts' ? 'В личный кабинет' : 'На главную';
           back.classList.remove('hidden');
+        }
+
+        if (!code || !state) {
+          showError('Вход отменён или ссылка устарела. Нажмите «На главную» и войдите через Яндекс снова.');
           return;
         }
 
         const saved = TurraAuth.loadOAuthState();
         if (!saved || saved.state !== state) {
-          spinner.classList.add('hidden');
-          status.textContent = '';
-          errorEl.textContent = 'Сессия входа истекла. Попробуйте снова с главной страницы.';
-          errorEl.classList.remove('hidden');
-          back.classList.remove('hidden');
+          showError('Сессия входа истекла. Вернитесь на главную и нажмите «Войти через Яндекс» ещё раз.');
           return;
         }
 
-        try {
-          const auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
+        const isLink = saved.mode === 'link';
+        if (isLink) {
+          title.textContent = 'Привязка аккаунта';
+          back.href = '/profile/#accounts';
+        }
+
+        async function finishLink() {
+          status.textContent = 'Привязываем Яндекс…';
+          let result;
+          try {
+            result = await TurraApi.linkProviderCallback(
+              saved.provider,
+              code,
+              state,
+              deviceId,
+            );
+          } catch (e) {
+            TurraAuth.clearOAuthState();
+            TurraAuth.clearOAuthPending?.();
+            if (TurraAuth.redirectMergeIfNeeded(e)) return;
+            throw e;
+          }
           TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
+
+          if (TurraAuth.redirectMergeIfNeeded(result)) return;
+
+          if (result.merge_required) {
+            throw new Error(
+              'Этот Яндекс уже привязан к другому аккаунту. Начните привязку заново из личного кабинета.',
+            );
+          }
+
+          if (!result.success) {
+            throw new Error(result.message || 'Не удалось привязать аккаунт');
+          }
+
+          history.replaceState({}, '', '/auth/oauth/callback');
+          location.replace('/profile/#accounts');
+        }
+
+        async function finishLogin() {
+          let auth;
+          try {
+            auth = await TurraApi.oauthCallback(saved.provider, code, state, deviceId);
+          } catch (e) {
+            TurraAuth.clearOAuthState();
+            TurraAuth.clearOAuthPending?.();
+            if (TurraAuth.redirectMergeIfNeeded(e)) return;
+            throw e;
+          }
+          TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
+
+          if (TurraAuth.redirectMergeIfNeeded(auth)) return;
+
+          TurraApi.storage.clear();
+          if (auth.access_token) TurraApi.storage.access = auth.access_token;
+          if (auth.refresh_token) TurraApi.storage.refresh = auth.refresh_token;
+
           TurraAuth.applyAuthResponse(auth);
-          location.replace('/#buy');
+          sessionStorage.setItem('turravpn_scroll_pricing_once', '1');
+          history.replaceState({}, '', '/auth/oauth/callback');
+          location.replace('/');
+        }
+
+        try {
+          if (isLink) {
+            await finishLink();
+            return;
+          }
+
+          try {
+            await finishLogin();
+          } catch (e) {
+            const msg = e?.message || '';
+            if (
+              /account linking/i.test(msg) &&
+              typeof TurraApi.linkProviderCallback === 'function'
+            ) {
+              title.textContent = 'Привязка аккаунта';
+              await finishLink();
+              return;
+            }
+            throw e;
+          }
         } catch (e) {
-          spinner.classList.add('hidden');
-          status.textContent = '';
-          errorEl.textContent = TurraAuth.authErrorMessage(e);
-          errorEl.classList.remove('hidden');
-          back.classList.remove('hidden');
+          if (TurraAuth.redirectMergeIfNeeded(e)) return;
+          showError(
+            TurraAuth.authErrorMessage(e),
+            isLink ? '/profile/#accounts' : '/',
+          );
           TurraAuth.clearOAuthState();
+          TurraAuth.clearOAuthPending?.();
         }
       })();
     </script>
