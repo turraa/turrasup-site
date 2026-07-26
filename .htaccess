@@ -11,3 +11,18 @@ RewriteRule ^ index.html [L]
 <FilesMatch "config\.js$">
   Header set Cache-Control "no-cache, no-store, must-revalidate"
 </FilesMatch>
+
+# ЛК: не кэшировать HTML/JS профиля
+<FilesMatch "^(profile\.js|api\.js|auth-common\.js)$">
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+</FilesMatch>
+
+# Главная SPA: не кэшировать index.html (бандлы с hash можно кэшировать долго)
+<FilesMatch "^index\.html$">
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+</FilesMatch>
+
+<FilesMatch "\.(mp4|webm)$">
+  Header set Accept-Ranges bytes
+  Header set Cache-Control "public, max-age=604800"
+</FilesMatch>
