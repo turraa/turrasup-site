@@ -1,4 +1,4 @@
-﻿deploy=2026-07-26T12:12:38.755Z
+﻿deploy=2026-07-26T12:24:29.813Z
 source=dist-web
 mode=static HTML/CSS/JS on Timeweb App Platform
 apiBase=https://cab.turrasup.net/api
