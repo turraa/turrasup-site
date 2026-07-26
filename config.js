@@ -1,7 +1,7 @@
-/** Настройки сайта — меняй только этот файл при деплое */
+﻿/** Настройки сайта — меняй только этот файл при деплое */
 window.TURRA_CONFIG = {
   /** База Cabinet API */
-  apiBase: 'https://cab.turrasup.net/api',
+  apiBase: '/api',
 
   /**
    * Режим покупки:
@@ -17,7 +17,7 @@ window.TURRA_CONFIG = {
   botUsername: 'TurraVpnbot',
 
   /** Публичный адрес этого сайта (поддомен — VPN-сервер не трогаем) */
-  siteUrl: 'https://buy.turrasup.ru',
+  siteUrl: 'https://staging.turrasup.ru',
 
   telegramUrl: 'https://t.me/TurraVpnbot',
   supportUrl: 'https://t.me/turravpn_sup',

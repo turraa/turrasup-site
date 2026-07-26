@@ -1,4 +1,6 @@
-﻿deploy=2026-07-26T12:34:46.878Z
-source=dist-web
-mode=static HTML/CSS/JS on Timeweb App Platform
-apiBase=https://cab.turrasup.net/api
+﻿deploy=2026-07-26T13:01:48.028Z
+branch=staging-proxy
+mode=Timeweb App Platform Dockerfile + nginx /api proxy
+siteUrl=https://staging.turrasup.ru
+apiBase=/api -> cab.turrasup.net
+test=https://staging.turrasup.ru/api/cabinet/auth/oauth/providers
