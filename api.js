@@ -50,34 +50,15 @@
     '/cabinet/auth/password/reset',
   ];
 
-  const REQUEST_TIMEOUT_MS = 25000;
-
   function shouldRetryRefresh(path) {
     if (NO_REFRESH_PATHS.some((p) => path === p || path.startsWith(p))) return false;
     if (path.includes('/cabinet/auth/oauth/') && path.includes('/callback')) return false;
     return !!storage.refresh;
   }
 
-  async function fetchWithTimeout(url, options = {}) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    try {
-      return await fetch(url, { ...options, signal: controller.signal });
-    } catch (e) {
-      if (e && e.name === 'AbortError') {
-        const err = new Error('Сервер не ответил вовремя. Проверьте интернет и попробуйте снова.');
-        err.code = 'TIMEOUT';
-        throw err;
-      }
-      throw e;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
   async function refreshToken() {
     if (!storage.refresh) return null;
-    const res = await fetchWithTimeout(`${cfg().apiBase}/cabinet/auth/refresh`, {
+    const res = await fetch(`${cfg().apiBase}/cabinet/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,13 +89,13 @@
       headers.Authorization = `Bearer ${storage.access}`;
     }
 
-    let res = await fetchWithTimeout(`${cfg().apiBase}${path}`, { ...options, method, headers });
+    let res = await fetch(`${cfg().apiBase}${path}`, { ...options, method, headers });
 
     if (res.status === 401 && shouldRetryRefresh(path)) {
       const token = await refreshToken();
       if (token) {
         headers.Authorization = `Bearer ${token}`;
-        res = await fetchWithTimeout(`${cfg().apiBase}${path}`, { ...options, method, headers });
+        res = await fetch(`${cfg().apiBase}${path}`, { ...options, method, headers });
       }
     }
 
@@ -230,43 +211,6 @@
       });
     },
 
-    getLinkedProviders() {
-      return request('/cabinet/auth/account/linked-providers');
-    },
-
-    linkProviderInit(provider) {
-      return request(`/cabinet/auth/account/link/${encodeURIComponent(provider)}/init`);
-    },
-
-    linkProviderCallback(provider, code, state, deviceId) {
-      return request(`/cabinet/auth/account/link/${encodeURIComponent(provider)}/callback`, {
-        method: 'POST',
-        body: JSON.stringify({
-          code,
-          state,
-          device_id: deviceId || undefined,
-        }),
-      });
-    },
-
-    unlinkProvider(provider) {
-      return request(`/cabinet/auth/account/unlink/${encodeURIComponent(provider)}`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
-    },
-
-    getMergePreview(mergeToken) {
-      return request(`/cabinet/auth/merge/${encodeURIComponent(mergeToken)}`);
-    },
-
-    executeMerge(mergeToken, keepSubscriptionFrom) {
-      return request(`/cabinet/auth/merge/${encodeURIComponent(mergeToken)}`, {
-        method: 'POST',
-        body: JSON.stringify({ keep_subscription_from: keepSubscriptionFrom }),
-      });
-    },
-
     getMe() {
       return request('/cabinet/auth/me');
     },
@@ -313,38 +257,6 @@
 
     getSubscription() {
       return request('/cabinet/subscription');
-    },
-
-    getTrialInfo() {
-      return request('/cabinet/subscription/trial');
-    },
-
-    activateTrial() {
-      return request('/cabinet/subscription/trial', { method: 'POST', body: JSON.stringify({}) });
-    },
-
-    getTrafficPackages() {
-      return request('/cabinet/subscription/traffic-packages');
-    },
-
-    purchaseTraffic(gb) {
-      return request('/cabinet/subscription/traffic', {
-        method: 'POST',
-        body: JSON.stringify({ gb }),
-      });
-    },
-
-    getDevicePrice(devices = 1) {
-      return request(
-        `/cabinet/subscription/devices/price?devices=${encodeURIComponent(String(devices))}`,
-      );
-    },
-
-    purchaseDevices(devices) {
-      return request('/cabinet/subscription/devices/purchase', {
-        method: 'POST',
-        body: JSON.stringify({ devices }),
-      });
     },
 
     // --- Landing mode ---

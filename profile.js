@@ -4,280 +4,6 @@
   const sec = () => window.TurraSecurity;
   const $ = (id) => document.getElementById(id);
 
-  let deviceCount = 1;
-  let subscriptionData = null;
-  let trialInfo = null;
-  let purchaseOptions = null;
-  let topUpMethods = [];
-  let topUpSelectedMethod = null;
-  let topUpSelectedSubOption = null;
-  let topUpAmountRub = 500;
-  let topUpPaymentUrl = null;
-  let topUpPaymentMeta = null;
-  let topUpPollTimer = null;
-  let topUpInitialBalanceKopeks = null;
-
-  function methodId(m) {
-    return String(m?.method_id || m?.id || '');
-  }
-
-  function isWebPaymentMethod(m) {
-    const id = methodId(m).toLowerCase();
-    const tg = !!(window.Telegram?.WebApp?.initData);
-    if (!tg && (id === 'telegram_stars' || id.includes('stars'))) return false;
-    return m?.is_available !== false;
-  }
-
-  function stopTopUpPolling() {
-    if (topUpPollTimer) {
-      clearInterval(topUpPollTimer);
-      topUpPollTimer = null;
-    }
-  }
-
-  function resetTopUpWait() {
-    stopTopUpPolling();
-    topUpPaymentUrl = null;
-    topUpPaymentMeta = null;
-    topUpInitialBalanceKopeks = null;
-    $('cabinet-topup-wait')?.classList.add('hidden');
-    $('cabinet-topup-actions')?.classList.remove('hidden');
-    $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = false);
-  }
-
-  function scrollToTopUp() {
-    $('cabinet-topup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function suggestTopUpOnError(message) {
-    if (!message || !/недостаточно/i.test(message)) return;
-    showMsg(`${message}. Пополните баланс ниже.`, false);
-    scrollToTopUp();
-  }
-
-  function getTopUpAmountKopeks() {
-    const customRaw = $('cabinet-topup-custom')?.value?.trim();
-    const rub = customRaw ? Number(customRaw) : topUpAmountRub;
-    if (!Number.isFinite(rub) || rub < 10) {
-      throw new Error('Минимальная сумма пополнения — 10 ₽');
-    }
-    return Math.round(rub * 100);
-  }
-
-  function renderTopUpSubOptions(method) {
-    const root = $('cabinet-topup-suboptions');
-    if (!root) return;
-    const opts = method?.sub_options || method?.options || [];
-    root.innerHTML = '';
-    if (!opts.length) {
-      root.classList.add('hidden');
-      topUpSelectedSubOption = null;
-      return;
-    }
-
-    root.classList.remove('hidden');
-    if (!opts.some((o) => o.id === topUpSelectedSubOption)) {
-      topUpSelectedSubOption = opts[0]?.id || null;
-    }
-
-    opts.forEach((opt) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `cabinet-topup-suboption${topUpSelectedSubOption === opt.id ? ' is-selected' : ''}`;
-      btn.textContent = opt.name;
-      btn.addEventListener('click', () => {
-        topUpSelectedSubOption = opt.id;
-        renderTopUpSubOptions(method);
-      });
-      root.appendChild(btn);
-    });
-  }
-
-  function renderTopUpMethods() {
-    const root = $('cabinet-topup-methods');
-    if (!root) return;
-
-    const methods = topUpMethods.filter(isWebPaymentMethod);
-    root.innerHTML = '';
-
-    if (!methods.length) {
-      root.innerHTML =
-        '<p class="muted small">Способы оплаты временно недоступны. Напишите в поддержку.</p>';
-      $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = true);
-      return;
-    }
-
-    if (!methods.some((m) => methodId(m) === topUpSelectedMethod)) {
-      const prefer = methods.find((m) => {
-        const id = methodId(m).toLowerCase();
-        return id === 'yookassa' || id === 'platega';
-      });
-      topUpSelectedMethod = methodId(prefer || methods[0]);
-    }
-
-    methods.forEach((method) => {
-      const id = methodId(method);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `cabinet-topup-method${topUpSelectedMethod === id ? ' is-selected' : ''}`;
-      btn.innerHTML = `<strong>${method.display_name || method.name || id}</strong>${
-        method.description ? `<span class="cabinet-topup-method__desc">${method.description}</span>` : ''
-      }`;
-      btn.addEventListener('click', () => {
-        topUpSelectedMethod = id;
-        renderTopUpMethods();
-      });
-      root.appendChild(btn);
-    });
-
-    const current = methods.find((m) => methodId(m) === topUpSelectedMethod);
-    renderTopUpSubOptions(current);
-    $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = false);
-  }
-
-  async function loadTopUpMethods() {
-    const root = $('cabinet-topup-methods');
-    if (!root) return;
-
-    root.innerHTML = '<p class="muted small">Загрузка…</p>';
-    try {
-      topUpMethods = await api().getPaymentMethods();
-      renderTopUpMethods();
-    } catch (e) {
-      root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить способы оплаты'}</p>`;
-      $('cabinet-topup-pay') && ($('cabinet-topup-pay').disabled = true);
-    }
-  }
-
-  function bindTopUpUi() {
-    $('cabinet-balance-topup')?.addEventListener('click', scrollToTopUp);
-
-    $('cabinet-topup-amounts')?.addEventListener('click', (event) => {
-      const btn = event.target.closest('[data-rub]');
-      if (!btn) return;
-      topUpAmountRub = Number(btn.dataset.rub) || 500;
-      $('cabinet-topup-custom').value = '';
-      $('cabinet-topup-amounts')
-        ?.querySelectorAll('.cabinet-topup-amount')
-        .forEach((el) => el.classList.toggle('is-selected', el === btn));
-    });
-
-    $('cabinet-topup-custom')?.addEventListener('input', () => {
-      $('cabinet-topup-amounts')
-        ?.querySelectorAll('.cabinet-topup-amount')
-        .forEach((el) => el.classList.remove('is-selected'));
-    });
-
-    $('cabinet-topup-open')?.addEventListener('click', () => {
-      try {
-        if (topUpPaymentUrl) sec().openTrustedUrl(topUpPaymentUrl, '_blank');
-      } catch (e) {
-        showMsg(e?.message || 'Ссылка оплаты недоступна', false);
-      }
-    });
-
-    $('cabinet-topup-pay')?.addEventListener('click', () => {
-      void handleTopUpPay();
-    });
-  }
-
-  function showTopUpWait() {
-    $('cabinet-topup-actions')?.classList.add('hidden');
-    $('cabinet-topup-wait')?.classList.remove('hidden');
-    $('cabinet-topup-status').textContent = 'Ожидаем оплату…';
-  }
-
-  async function startTopUpPolling() {
-    stopTopUpPolling();
-    const started = Date.now();
-    const maxMs = cfg().paymentPollMaxMs || 1200 * 1000;
-    const interval = cfg().pollIntervalMs || 3000;
-
-    topUpPollTimer = setInterval(async () => {
-      if (Date.now() - started > maxMs) {
-        stopTopUpPolling();
-        showMsg('Время ожидания истекло. Если оплата прошла — обновите страницу.', false);
-        resetTopUpWait();
-        return;
-      }
-
-      try {
-        if (topUpPaymentMeta?.method && topUpPaymentMeta?.paymentId) {
-          try {
-            await api().checkPayment(topUpPaymentMeta.method, topUpPaymentMeta.paymentId);
-          } catch {
-            /* not paid yet */
-          }
-        }
-
-        const balance = await api().getBalance();
-        $('cabinet-topup-status').textContent = `Ожидаем оплату… Баланс: ${formatRub(balance.balance_kopeks)}`;
-
-        if (
-          topUpInitialBalanceKopeks != null &&
-          balance.balance_kopeks > topUpInitialBalanceKopeks
-        ) {
-          stopTopUpPolling();
-          resetTopUpWait();
-          showMsg('Баланс пополнен!', true);
-          await reloadProfile();
-        }
-      } catch {
-        /* retry */
-      }
-    }, interval);
-  }
-
-  async function handleTopUpPay() {
-    const payBtn = $('cabinet-topup-pay');
-    showMsg('', true);
-    resetTopUpWait();
-
-    try {
-      const amountKopeks = getTopUpAmountKopeks();
-      if (!topUpSelectedMethod) {
-        throw new Error('Выберите способ оплаты');
-      }
-
-      const fresh = await api().getPaymentMethods();
-      topUpMethods = fresh;
-      const current = fresh.find((m) => methodId(m) === topUpSelectedMethod);
-      if (!current || !isWebPaymentMethod(current)) {
-        renderTopUpMethods();
-        throw new Error('Этот способ оплаты недоступен. Выберите другой.');
-      }
-
-      const balanceBefore = await api().getBalance();
-      topUpInitialBalanceKopeks = balanceBefore.balance_kopeks;
-
-      if (payBtn) payBtn.disabled = true;
-      const topUp = await api().createTopUp(
-        amountKopeks,
-        topUpSelectedMethod,
-        topUpSelectedSubOption || undefined,
-      );
-
-      if (!topUp?.payment_url || !sec().isSafePaymentUrl(topUp.payment_url)) {
-        throw new Error('Получена недопустимая ссылка оплаты. Попробуйте другой способ.');
-      }
-
-      topUpPaymentUrl = topUp.payment_url;
-      topUpPaymentMeta = {
-        method: topUpSelectedMethod,
-        paymentId: topUp.payment_id,
-      };
-
-      showTopUpWait();
-      sec().openTrustedUrl(topUp.payment_url, '_blank');
-      await startTopUpPolling();
-    } catch (e) {
-      showMsg(e?.message || 'Не удалось создать оплату', false);
-      resetTopUpWait();
-    } finally {
-      if (payBtn) payBtn.disabled = false;
-    }
-  }
-
   function formatRub(kopeks) {
     return `${(kopeks / 100).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₽`;
   }
@@ -310,67 +36,6 @@
     return `${cfg().deepLinkScheme}://import?sub=${encodeURIComponent(subUrl)}`;
   }
 
-  function subscriptionDetails(subscription) {
-    return subscription?.subscription || null;
-  }
-
-  function isSubscriptionActive(subscription) {
-    if (!subscription) return false;
-
-    const sub = subscriptionDetails(subscription);
-    if (sub?.is_active === true || sub?.is_limited === true) return true;
-
-    const status = (sub?.status || '').toLowerCase();
-    if (status === 'active' || status === 'limited') return true;
-
-    const expires = sub?.end_date || sub?.expires_at || sub?.expire_at;
-    if (expires) {
-      const end = new Date(expires);
-      if (!Number.isNaN(end.getTime()) && end.getTime() > Date.now()) return true;
-    }
-
-    if ((sub?.days_left ?? 0) > 0) return true;
-
-    return false;
-  }
-
-  function canBuyAddons(subscription) {
-    const sub = subscriptionDetails(subscription);
-    if (!isSubscriptionActive(subscription) || !sub) return false;
-    if (sub.is_trial) return false;
-    return sub.is_active !== false || sub.is_limited === true || subscription.has_subscription === true;
-  }
-
-  function normalizePackages(data) {
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.packages)) return data.packages;
-    if (Array.isArray(data?.items)) return data.items;
-    return [];
-  }
-
-  function buildPackagesFromTariff(subscription) {
-    if (!purchaseOptions || purchaseOptions.sales_mode !== 'tariffs') return [];
-
-    const sub = subscriptionDetails(subscription);
-    const tariffId = sub?.tariff_id ?? purchaseOptions.current_tariff_id;
-    const tariff =
-      purchaseOptions.tariffs?.find((t) => t.id === tariffId) ||
-      purchaseOptions.tariffs?.find((t) => t.is_current) ||
-      purchaseOptions.tariffs?.[0];
-
-    if (!tariff?.traffic_topup_enabled || !tariff.traffic_topup_packages?.length) return [];
-
-    const pricePerGb = tariff.traffic_price_per_gb_kopeks || 0;
-    if (pricePerGb <= 0) return [];
-
-    return tariff.traffic_topup_packages.map((gb) => ({
-      gb,
-      is_unlimited: false,
-      price_kopeks: gb * pricePerGb,
-      price_rubles: (gb * pricePerGb) / 100,
-    }));
-  }
-
   function showError(msg) {
     $('profile-loading').classList.add('hidden');
     $('profile-content').classList.add('hidden');
@@ -379,176 +44,7 @@
     el.classList.remove('hidden');
   }
 
-  function showMsg(text, ok) {
-    const el = $('cabinet-msg');
-    if (!el) return;
-    if (!text) {
-      el.classList.add('hidden');
-      el.textContent = '';
-      return;
-    }
-    el.textContent = text;
-    el.classList.remove('hidden', 'alert--ok', 'alert--err');
-    el.classList.add(ok ? 'alert--ok' : 'alert--err');
-  }
-
-  function setBlockVisible(id, visible) {
-    const el = $(id);
-    if (!el) return;
-    el.classList.toggle('hidden', !visible);
-  }
-
-  async function refreshDevicePrice() {
-    const priceEl = $('cabinet-dev-price');
-    const buyBtn = $('cabinet-dev-buy');
-    const devicesBlock = $('cabinet-devices-block');
-    if (!priceEl || !buyBtn) return;
-
-    $('cabinet-dev-count').textContent = String(deviceCount);
-    priceEl.textContent = 'Расчёт…';
-    buyBtn.disabled = true;
-
-    try {
-      const info = await api().getDevicePrice(deviceCount);
-      if (info.available === false) {
-        priceEl.textContent = info.reason || 'Докупка устройств недоступна для вашего тарифа';
-        devicesBlock?.classList.remove('hidden');
-        return;
-      }
-      priceEl.textContent = info.total_price_label || formatRub(info.total_price_kopeks || 0);
-      buyBtn.disabled = false;
-      devicesBlock?.classList.remove('hidden');
-    } catch (e) {
-      priceEl.textContent = e?.message || 'Не удалось рассчитать цену';
-      devicesBlock?.classList.remove('hidden');
-    }
-  }
-
-  function renderTrafficPackages(packages, subscription) {
-    const root = $('cabinet-traffic-packages');
-    const trafficBlock = $('cabinet-traffic-block');
-    if (!root) return;
-
-    root.innerHTML = '';
-    const sub = subscriptionDetails(subscription);
-    const unlimitedTraffic =
-      sub?.traffic_limit_gb === 0 ||
-      sub?.traffic_limit_gb >= 99999 ||
-      purchaseOptions?.tariffs?.some(
-        (t) => t.id === sub?.tariff_id && t.is_unlimited_traffic,
-      );
-
-    if (unlimitedTraffic) {
-      root.innerHTML =
-        '<p class="muted small">У вас безлимитный тариф — докупка трафика не требуется.</p>';
-      trafficBlock?.classList.remove('hidden');
-      return;
-    }
-
-    if (!packages?.length) {
-      root.innerHTML =
-        '<p class="muted small">Пакеты трафика пока недоступны. Если нужна докупка — напишите в поддержку или включите «Докупка трафика» в тарифе Bedolaga.</p>';
-      trafficBlock?.classList.remove('hidden');
-      return;
-    }
-
-    packages.forEach((pkg) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cabinet-package-btn';
-      const label = pkg.is_unlimited ? 'Безлимит' : `+${pkg.gb} ГБ`;
-      const price = pkg.price_rubles != null ? `${pkg.price_rubles} ₽` : formatRub(pkg.price_kopeks);
-      btn.innerHTML = `<strong>${label}</strong><span>${price}</span>`;
-      btn.addEventListener('click', async () => {
-        if (!confirm(`Купить ${label} за ${price}? Списание с баланса.`)) return;
-        showMsg('', true);
-        btn.disabled = true;
-        try {
-          const res = await api().purchaseTraffic(pkg.gb);
-          showMsg(res.message || 'Трафик добавлен', true);
-          await reloadProfile();
-        } catch (e) {
-          suggestTopUpOnError(e?.message);
-          if (!e?.message || !/недостаточно/i.test(e.message)) {
-            showMsg(e?.message || 'Не удалось купить трафик', false);
-          }
-          btn.disabled = false;
-        }
-      });
-      root.appendChild(btn);
-    });
-
-    trafficBlock?.classList.remove('hidden');
-  }
-
-  function renderTrialSection() {
-    const block = $('cabinet-trial');
-    const desc = $('cabinet-trial-desc');
-    const btn = $('cabinet-trial-btn');
-    if (!block || !trialInfo) return;
-
-    if (!trialInfo.is_available || isSubscriptionActive(subscriptionData)) {
-      block.classList.add('hidden');
-      return;
-    }
-
-    const price =
-      trialInfo.requires_payment && trialInfo.price_kopeks
-        ? formatRub(trialInfo.price_kopeks)
-        : 'Бесплатно';
-
-    desc.textContent = `${price} · ${trialInfo.duration_days} дн. · ${trialInfo.traffic_limit_gb} ГБ · до ${trialInfo.device_limit} устр.`;
-    block.classList.remove('hidden');
-
-    btn.onclick = async () => {
-      btn.disabled = true;
-      showMsg('', true);
-      try {
-        await api().activateTrial();
-        showMsg('Пробный период активирован!', true);
-        await reloadProfile();
-      } catch (e) {
-        showMsg(e?.message || 'Не удалось активировать trial', false);
-        btn.disabled = false;
-      }
-    };
-  }
-
-  function renderUsage(subscription) {
-    const usage = $('cabinet-usage');
-    const sub = subscriptionDetails(subscription);
-    if (!usage || !isSubscriptionActive(subscription) || !sub) {
-      usage?.classList.add('hidden');
-      return;
-    }
-
-    const used = sub.traffic_used_gb ?? 0;
-    const limit = sub.traffic_limit_gb;
-    const trafficText =
-      limit != null && limit > 0 && limit < 99999
-        ? `${used} / ${limit} ГБ`
-        : `${used} ГБ · безлимит`;
-
-    $('cabinet-traffic').textContent = trafficText;
-    $('cabinet-devices').textContent =
-      sub.device_limit != null ? `до ${sub.device_limit}` : '—';
-    usage.classList.remove('hidden');
-  }
-
-  function renderAddons(subscription) {
-    const block = $('cabinet-addons');
-    if (!block) return;
-
-    if (!canBuyAddons(subscription)) {
-      block.classList.add('hidden');
-      return;
-    }
-
-    block.classList.remove('hidden');
-  }
-
   function renderProfile(user, subscription, balanceKopeks) {
-    subscriptionData = subscription;
     const name = userDisplayName(user);
     const initial = (name[0] || '?').toUpperCase();
 
@@ -567,31 +63,20 @@
     const balance = user.balance_kopeks ?? balanceKopeks;
     $('cabinet-balance').textContent = balance != null ? formatRub(balance) : '—';
 
-    const active = isSubscriptionActive(subscription);
-    const sub = subscriptionDetails(subscription);
-
-    $('cabinet-sub-status').textContent = active
-      ? sub?.is_trial
-        ? 'Trial'
-        : 'Активна'
-      : 'Нет подписки';
+    const active = subscription?.has_subscription;
+    $('cabinet-sub-status').textContent = active ? 'Активна' : 'Нет подписки';
     $('cabinet-sub-status').style.color = active ? '#86efac' : '';
 
-    const expires = sub?.end_date || sub?.expires_at || sub?.expire_at;
+    const expires =
+      subscription?.subscription?.expires_at ||
+      subscription?.subscription?.expire_at ||
+      subscription?.subscription?.end_date;
     $('cabinet-sub-expires').textContent = active ? formatDateRu(expires) : '—';
 
-    const subUrl = sub?.subscription_url;
+    const subUrl = subscription?.subscription?.subscription_url;
     const keyBlock = $('cabinet-key');
-    const setupBlock = $('cabinet-setup-guide');
     if (active && subUrl && sec().isSafeSubscriptionUrl(subUrl)) {
       keyBlock.classList.remove('hidden');
-      if (setupBlock) {
-        setupBlock.classList.remove('hidden');
-        if (!setupBlock.dataset.rendered && window.TurraSetupGuide?.render) {
-          window.TurraSetupGuide.render(setupBlock);
-          setupBlock.dataset.rendered = '1';
-        }
-      }
       $('cabinet-sub-link').value = subUrl;
       $('cabinet-btn-copy').onclick = async () => {
         await navigator.clipboard.writeText(subUrl);
@@ -605,210 +90,15 @@
       };
     } else {
       keyBlock.classList.add('hidden');
-      if (setupBlock) setupBlock.classList.add('hidden');
     }
-
-    renderUsage(subscription);
-    renderTrialSection();
-    renderAddons(subscription);
-    ensureAccountsSection();
-    bindLinkYandexButton();
 
     $('profile-loading').classList.add('hidden');
     $('profile-content').classList.remove('hidden');
   }
 
-  async function loadAddons() {
-    if (!canBuyAddons(subscriptionData)) return;
-
-    renderAddons(subscriptionData);
-    setBlockVisible('cabinet-addons', true);
-
-    const root = $('cabinet-traffic-packages');
-    if (root) root.innerHTML = '<p class="muted small">Загрузка пакетов…</p>';
-
-    let packages = [];
-    let packagesError = null;
-
-    try {
-      packages = normalizePackages(await api().getTrafficPackages());
-    } catch (e) {
-      packagesError = e;
-      packages = [];
-    }
-
-    if (!packages.length) {
-      packages = buildPackagesFromTariff(subscriptionData);
-    }
-
-    if (!packages.length && packagesError) {
-      if (root) {
-        root.innerHTML = `<p class="muted small">${packagesError.message || 'Не удалось загрузить пакеты трафика'}</p>`;
-      }
-      setBlockVisible('cabinet-traffic-block', true);
-    } else {
-      renderTrafficPackages(packages, subscriptionData);
-    }
-
-    deviceCount = 1;
-    await refreshDevicePrice();
-  }
-
-  async function reloadProfile() {
-    const [me, subscription] = await Promise.all([
-      api().getMe(),
-      api().getSubscription(),
-    ]);
-    const user = me.user || me;
-    renderProfile(user, subscription, null);
-
-    const [opts, trial] = await Promise.all([
-      api().getPurchaseOptions().catch(() => null),
-      api().getTrialInfo().catch(() => null),
-    ]);
-    purchaseOptions = opts;
-    trialInfo = trial;
-    renderProfile(user, subscription, opts?.balance_kopeks);
-
-    await Promise.all([
-      loadAddons().catch(() => undefined),
-      loadLinkedAccounts().catch(() => undefined),
-      loadTopUpMethods().catch(() => undefined),
-    ]);
-  }
-
-  function ensureAccountsSection() {
-    if ($('cabinet-accounts')) return;
-
-    const stats = document.querySelector('.cabinet-stats');
-    if (!stats) return;
-
-    const section = document.createElement('div');
-    section.id = 'cabinet-accounts';
-    section.className = 'cabinet-section cabinet-section--highlight';
-    section.innerHTML = `
-      <h2 class="h3 section-title-sm">Способы входа</h2>
-      <p class="muted small">
-        Привяжите Яндекс, чтобы входить на сайт по почте — подписка и баланс останутся теми же,
-        что в Telegram-боте.
-      </p>
-      <div id="cabinet-linked-list" class="cabinet-linked-list">
-        <p class="muted small">Загрузка…</p>
-      </div>
-      <button type="button" class="cabinet-yandex-link" id="cabinet-link-yandex">
-        <span class="cabinet-yandex-link__icon" aria-hidden="true">Я</span>
-        <span>Привязать Яндекс</span>
-      </button>
-      <p id="cabinet-accounts-msg" class="muted small hidden"></p>
-    `;
-    stats.insertAdjacentElement('afterend', section);
-  }
-
-  function bindLinkYandexButton() {
-    const btn = $('cabinet-link-yandex');
-    if (!btn || btn.dataset.bound === '1') return;
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', () => {
-      void startLinkYandex();
-    });
-  }
-
-  const VISIBLE_LINK_PROVIDERS = new Set(['telegram', 'yandex']);
-
-  function providerLabel(name) {
-    const map = {
-      telegram: 'Telegram',
-      yandex: 'Яндекс',
-      email: 'Email',
-      google: 'Google',
-      discord: 'Discord',
-      vk: 'VK',
-    };
-    return map[name] || name;
-  }
-
-  async function loadLinkedAccounts() {
-    ensureAccountsSection();
-    bindLinkYandexButton();
-
-    const root = $('cabinet-linked-list');
-    const linkBtn = $('cabinet-link-yandex');
-    const hint = $('cabinet-accounts-msg');
-    if (!root || !linkBtn) return;
-
-    hint?.classList.add('hidden');
-    linkBtn.classList.remove('hidden');
-
-    if (typeof api().getLinkedProviders !== 'function') {
-      root.innerHTML =
-        '<p class="muted small">На сервере старая версия api.js. Обновите страницу (Ctrl+F5) или залейте новые файлы с dist-web.</p>';
-      return;
-    }
-
-    try {
-      const data = await api().getLinkedProviders();
-      const providers = (data.providers || []).filter((item) =>
-        VISIBLE_LINK_PROVIDERS.has(item.provider),
-      );
-      root.innerHTML = '';
-
-      if (!providers.length) {
-        root.innerHTML = '<p class="muted small">Способы входа недоступны.</p>';
-        linkBtn?.classList.remove('hidden');
-        return;
-      }
-
-      providers.forEach((item) => {
-        const row = document.createElement('div');
-        row.className = 'cabinet-linked-row';
-        const idText = item.identifier ? ` · ${item.identifier}` : '';
-        row.innerHTML = item.linked
-          ? `<strong>${providerLabel(item.provider)}</strong><span class="cabinet-linked-row__ok">Привязан${idText}</span>`
-          : `<strong>${providerLabel(item.provider)}</strong><span class="cabinet-linked-row__off">Не привязан</span>`;
-        root.appendChild(row);
-      });
-
-      const yandex = providers.find((p) => p.provider === 'yandex');
-      if (yandex?.linked) {
-        linkBtn?.classList.add('hidden');
-        if (hint) {
-          hint.textContent =
-            'Яндекс привязан — входите на сайт кнопкой «Войти через Яндекс» на главной странице.';
-          hint.classList.remove('hidden');
-        }
-      } else {
-        linkBtn?.classList.remove('hidden');
-      }
-    } catch (e) {
-      root.innerHTML = `<p class="muted small">${e?.message || 'Не удалось загрузить способы входа'}</p>`;
-      linkBtn?.classList.remove('hidden');
-    }
-  }
-
-  async function startLinkYandex() {
-    const btn = $('cabinet-link-yandex');
-    if (btn) btn.disabled = true;
-    showMsg('', true);
-
-    if (typeof api().linkProviderInit !== 'function') {
-      if (btn) btn.disabled = false;
-      showMsg('Обновите страницу (Ctrl+F5). Если не помогло — залейте api.js?v=7 на сервер.', false);
-      return;
-    }
-
-    try {
-      const { authorize_url, state } = await api().linkProviderInit('yandex');
-      window.TurraAuth.saveOAuthState('yandex', state, 'link');
-      location.href = authorize_url;
-    } catch (e) {
-      if (btn) btn.disabled = false;
-      showMsg(e?.message || 'Не удалось начать привязку Яндекса', false);
-    }
-  }
-
   function logout() {
     api().storage.clear();
-    location.href = '/';
+    location.href = '/#buy';
   }
 
   async function initLinks() {
@@ -836,77 +126,42 @@
       localStorage.removeItem('turravpn_access');
     }
 
-    const mergeReturn = sessionStorage.getItem('turravpn_merge_return');
-    if (mergeReturn) {
-      sessionStorage.removeItem('turravpn_merge_return');
-      location.replace(`/auth/merge/?token=${encodeURIComponent(mergeReturn)}`);
-      return;
-    }
-
     const restored = await api().restoreSession();
     if (!restored && !api().storage.access) {
-      location.replace('/#pricing');
+      location.replace('/#buy');
       return;
     }
 
     $('cabinet-logout').addEventListener('click', logout);
-    bindTopUpUi();
-
-    $('cabinet-buy-renew')?.addEventListener('click', () => {
-      sessionStorage.setItem('turravpn_checkout_renew', '1');
-    });
-
-    ensureAccountsSection();
-    bindLinkYandexButton();
-
-    $('cabinet-dev-minus')?.addEventListener('click', () => {
-      deviceCount = Math.max(1, deviceCount - 1);
-      void refreshDevicePrice();
-    });
-    $('cabinet-dev-plus')?.addEventListener('click', () => {
-      deviceCount = Math.min(10, deviceCount + 1);
-      void refreshDevicePrice();
-    });
-    $('cabinet-dev-buy')?.addEventListener('click', async () => {
-      showMsg('', true);
-      const btn = $('cabinet-dev-buy');
-      btn.disabled = true;
-      try {
-        const res = await api().purchaseDevices(deviceCount);
-        showMsg(res.message || 'Устройства добавлены', true);
-        await reloadProfile();
-      } catch (e) {
-        suggestTopUpOnError(e?.message);
-        if (!e?.message || !/недостаточно/i.test(e.message)) {
-          showMsg(e?.message || 'Не удалось купить устройства', false);
-        }
-        btn.disabled = false;
-      }
-    });
-
     await initLinks();
 
     try {
-      await reloadProfile();
-      if (location.hash === '#addons') {
-        $('cabinet-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      if (location.hash === '#accounts') {
-        $('cabinet-accounts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      const [me, subscription, opts] = await Promise.all([
+        api().getMe(),
+        api().getSubscription(),
+        api().getPurchaseOptions().catch(() => null),
+      ]);
+
+      const user = me.user || me;
+      renderProfile(user, subscription, opts?.balance_kopeks);
     } catch (e) {
       if (e?.status === 401) {
         const again = await api().restoreSession();
         if (again) {
           try {
-            await reloadProfile();
+            const [me, subscription, opts] = await Promise.all([
+              api().getMe(),
+              api().getSubscription(),
+              api().getPurchaseOptions().catch(() => null),
+            ]);
+            renderProfile(me.user || me, subscription, opts?.balance_kopeks);
             return;
           } catch {
             /* fall through */
           }
         }
         api().storage.clear();
-        location.replace('/#pricing');
+        location.replace('/#buy');
         return;
       }
       showError(e?.message || 'Не удалось загрузить профиль. Попробуйте обновить страницу.');
