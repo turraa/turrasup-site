@@ -1,7 +1,7 @@
 /** Настройки сайта — меняй только этот файл при деплое */
 window.TURRA_CONFIG = {
-  /** Cabinet API — same-origin через /api на buy.turrasup.ru (прокси на cab.turrasup.net) */
-  apiBase: '/api',
+  /** База Cabinet API */
+  apiBase: 'https://cab.turrasup.net/api',
 
   /**
    * Режим покупки:

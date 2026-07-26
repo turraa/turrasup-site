@@ -1,4 +1,4 @@
-﻿deploy=2026-07-26T11:08:45.548Z
+﻿deploy=2026-07-26T11:54:53.620Z
 source=dist-web
-docker=Timeweb App Platform, С‚РёРї Dockerfile, РІРµС‚РєР° main2
-apiBase=/api (РїСЂРѕРєСЃРё nginx -> cab.turrasup.net)
+mode=static HTML/CSS/JS on Timeweb App Platform
+apiBase=https://cab.turrasup.net/api
