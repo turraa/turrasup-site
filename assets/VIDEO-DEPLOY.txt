@@ -1,0 +1,17 @@
+Видео НЕ нужно загружать на Timeweb и GitHub.
+
+Варианты в public/config.js:
+
+1) YouTube (самый надёжный):
+   - Загрузите instru2.mp4 на YouTube как «Доступ по ссылке»
+   - Скопируйте embed-ссылку: Смотреть → Поделиться → Встроить
+   - Вставьте в setupVideoEmbedUrl
+
+2) GitHub Releases (как TurraVPN.exe):
+   - Используйте instry.mp4 (~200 МБ), не instru2 (~2,5 ГБ)
+   - Releases → New release → прикрепите instry.mp4
+   - setupVideoUrl: 'https://github.com/.../releases/latest/download/instry.mp4'
+
+3) Яндекс.Диск (уже настроено):
+   - setupVideoPublicUrl подгружает видео автоматически
+   - Загрузка на хостинг не нужна

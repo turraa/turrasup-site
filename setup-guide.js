@@ -1,0 +1,274 @@
+/**
+ * Блок «Как подключиться» — видео и пошаговая инструкция.
+ * Используется в личном кабинете (public/profile).
+ */
+(function setupGuideModule(global) {
+  const cfg = () => global.TURRA_CONFIG || {};
+
+  function setupApps() {
+    return Array.isArray(cfg().setupApps) ? cfg().setupApps : [];
+  }
+
+  function setupVideoEmbedUrl() {
+    return normalizeEmbedUrl(cfg().setupVideoEmbedUrl || '');
+  }
+
+  function setupVideoUrl() {
+    return cfg().setupVideoUrl || '';
+  }
+
+  function setupVideoPublicUrl() {
+    return cfg().setupVideoPublicUrl || '';
+  }
+
+  function setupVideoFallbackUrl() {
+    return setupVideoPublicUrl() || setupVideoUrl();
+  }
+
+  function downloadUrl() {
+    return cfg().downloadUrl || '/#download';
+  }
+
+  function normalizeEmbedUrl(url) {
+    if (!url) return '';
+
+    const ytWatch = url.match(/youtube\.com\/watch\?v=([\w-]+)/);
+    if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}`;
+
+    const ytShort = url.match(/youtu\.be\/([\w-]+)/);
+    if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}`;
+
+    const rutube = url.match(/rutube\.ru\/video\/([a-f0-9]+)/i);
+    if (rutube) return `https://rutube.ru/play/embed/${rutube[1]}`;
+
+    return url;
+  }
+
+  const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mkv)$/i;
+
+  function isVideoFile(item) {
+    if (item?.mime_type?.startsWith('video/')) return true;
+    return VIDEO_EXT.test(item?.name || '');
+  }
+
+  function findVideoItem(resource) {
+    if (resource?.type === 'file' && isVideoFile(resource)) return resource;
+    const items = resource?._embedded?.items || [];
+    return items.find((item) => item.type === 'file' && isVideoFile(item)) || null;
+  }
+
+  async function resolveSetupVideoUrl() {
+    const direct = setupVideoUrl();
+    if (direct) return direct;
+    const diskUrl = setupVideoPublicUrl();
+    if (!diskUrl) return null;
+    return resolveYandexPublicVideoUrl(diskUrl);
+  }
+
+  async function resolveYandexPublicVideoUrl(publicUrl) {
+    if (!publicUrl) return null;
+
+    const metaRes = await fetch(
+      `https://cloud-api.yandex.net/v1/disk/public/resources?public_key=${encodeURIComponent(publicUrl)}&limit=30`,
+    );
+    if (!metaRes.ok) return null;
+
+    const meta = await metaRes.json();
+    const videoItem = findVideoItem(meta);
+    if (!videoItem?.name) return null;
+    if (videoItem.file) return videoItem.file;
+
+    const downloadUrlApi = new URL(
+      'https://cloud-api.yandex.net/v1/disk/public/resources/download',
+    );
+    downloadUrlApi.searchParams.set('public_key', publicUrl);
+    if (meta.type === 'dir') {
+      downloadUrlApi.searchParams.set('path', videoItem.name);
+    }
+
+    const dlRes = await fetch(downloadUrlApi.toString());
+    if (!dlRes.ok) return null;
+
+    const dl = await dlRes.json();
+    return dl.href || null;
+  }
+
+  function storeLink(href, label) {
+    return `<a class="setup-guide__store-link" href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  }
+
+  function androidApkUrl() {
+    return cfg().androidDownloadUrl || 'https://status.turrasup.ru/downloads/TurraProxy.apk';
+  }
+
+  function androidPageUrl() {
+    return cfg().androidDownloadPageUrl || 'https://status.turrasup.ru/downloads/android.html';
+  }
+
+  function renderAltAppsList(apps) {
+    return apps
+      .filter((app) => app.label !== 'TurraProxy')
+      .map((app, index) => {
+        const prefix = index > 0 ? ' или ' : '';
+        const ios = app.ios ? `${storeLink(app.ios, 'App Store')}, ` : '';
+        return (
+          `${prefix}<strong>${app.label}</strong> (` +
+          `${ios}${storeLink(app.android, 'Google Play')})`
+        );
+      })
+      .join('');
+  }
+
+  function renderTextPanel(apps) {
+    const altAppsHtml = renderAltAppsList(apps);
+    const winUrl = downloadUrl();
+    const apkUrl = androidApkUrl();
+    const pageUrl = androidPageUrl();
+
+    return `
+      <div class="setup-guide__panel" role="tabpanel">
+        <div class="setup-guide__cards">
+          <article class="setup-guide__card">
+            <h4 class="setup-guide__card-title">Android</h4>
+            <ol class="setup-guide__steps">
+              <li>Скачайте официальный <a href="${apkUrl}" target="_blank" rel="noopener noreferrer">TurraProxy APK</a>
+              (или <a href="${pageUrl}" target="_blank" rel="noopener noreferrer">страница скачивания</a>). Подойдёт телефон и Android TV.</li>
+              <li>Установите APK и добавьте подписку по ссылке из поля «Ключ подключения» выше.</li>
+              <li>Альтернатива: ${altAppsHtml}.</li>
+            </ol>
+          </article>
+          <article class="setup-guide__card">
+            <h4 class="setup-guide__card-title">Windows</h4>
+            <ol class="setup-guide__steps">
+              <li>Скачайте <a href="${winUrl}" target="_blank" rel="noopener noreferrer">лаунчер TurraVPN</a> для Windows.</li>
+              <li>Установите приложение и вставьте ссылку подписки из поля «Ключ подключения».</li>
+              <li>Выберите сервер и подключитесь — можно пользоваться VPN на компьютере.</li>
+            </ol>
+          </article>
+        </div>
+        <p class="setup-guide__note">
+          Ссылка подписки одна для всех устройств. Скопируйте её один раз и используйте в нужном приложении.
+        </p>
+      </div>
+    `;
+  }
+
+  function renderVideoPanel(fallbackUrl) {
+    return `
+      <div class="setup-guide__panel" role="tabpanel" data-setup-video-panel>
+        <div class="setup-guide__video-wrap">
+          <div class="setup-guide__video-placeholder hidden" data-setup-video-loading>
+            <div class="spinner" aria-hidden="true"></div>
+            <p class="muted small">Загружаем видео…</p>
+          </div>
+          <div class="setup-guide__video-fallback hidden" data-setup-video-fallback>
+            <p class="muted small">Не удалось воспроизвести видео на странице.</p>
+            ${
+              fallbackUrl
+                ? `<a class="setup-guide__video-link" href="${fallbackUrl}" target="_blank" rel="noopener noreferrer">Открыть видео в новой вкладке</a>`
+                : ''
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function render(root) {
+    const apps = setupApps();
+    const embedUrl = setupVideoEmbedUrl();
+    const fallbackUrl = setupVideoFallbackUrl();
+
+    root.innerHTML = `
+      <section class="setup-guide" aria-labelledby="setup-guide-title">
+        <div class="setup-guide__head">
+          <h2 id="setup-guide-title" class="h3 section-title-sm">Как подключиться</h2>
+          <p class="muted small setup-guide__lead">
+            Выберите удобный формат: посмотрите видео или следуйте пошаговой инструкции ниже.
+          </p>
+        </div>
+        <div class="setup-guide__tabs" role="tablist" aria-label="Формат инструкции">
+          <button type="button" role="tab" class="setup-guide__tab is-active" data-setup-tab="video" aria-selected="true">
+            Видеоинструкция
+          </button>
+          <button type="button" role="tab" class="setup-guide__tab" data-setup-tab="text" aria-selected="false">
+            Пошаговая инструкция
+          </button>
+        </div>
+        <div data-setup-panel="video">${renderVideoPanel(fallbackUrl)}</div>
+        <div class="hidden" data-setup-panel="text">${renderTextPanel(apps)}</div>
+      </section>
+    `;
+
+    const tabs = root.querySelectorAll('[data-setup-tab]');
+    const panels = root.querySelectorAll('[data-setup-panel]');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const id = tab.getAttribute('data-setup-tab');
+        tabs.forEach((btn) => {
+          const active = btn.getAttribute('data-setup-tab') === id;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        panels.forEach((panel) => {
+          panel.classList.toggle('hidden', panel.getAttribute('data-setup-panel') !== id);
+        });
+      });
+    });
+
+    void loadVideo(root, embedUrl);
+  }
+
+  async function loadVideo(root, embedUrl) {
+    const wrap = root.querySelector('.setup-guide__video-wrap');
+    const loading = root.querySelector('[data-setup-video-loading]');
+    const fallback = root.querySelector('[data-setup-video-fallback]');
+    if (!wrap) return;
+
+    if (embedUrl) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'setup-guide__embed';
+      iframe.src = embedUrl;
+      iframe.title = 'Видеоинструкция TurraVPN';
+      iframe.setAttribute(
+        'allow',
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+      );
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+      return;
+    }
+
+    loading?.classList.remove('hidden');
+
+    let url = null;
+    try {
+      url = await resolveSetupVideoUrl();
+    } catch {
+      url = null;
+    }
+
+    loading?.classList.add('hidden');
+
+    if (!url) {
+      fallback?.classList.remove('hidden');
+      return;
+    }
+
+    const video = document.createElement('video');
+    video.className = 'setup-guide__video';
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.src = url;
+    video.textContent = 'Ваш браузер не поддерживает воспроизведение видео.';
+    video.addEventListener('error', () => {
+      video.remove();
+      fallback?.classList.remove('hidden');
+    });
+    wrap.appendChild(video);
+  }
+
+  global.TurraSetupGuide = { render };
+})(window);
